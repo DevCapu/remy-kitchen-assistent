@@ -33,7 +33,7 @@ fun RecipeDetailsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            RecipeItem(recipe)
+            RecipeItem(recipe) { }
         }
         item {
             Card(

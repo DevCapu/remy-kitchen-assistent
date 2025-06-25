@@ -3,6 +3,7 @@ package br.com.devcapu.remy.recipe.presentation.screen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,15 +30,19 @@ import br.com.devcapu.remy.R
 import br.com.devcapu.remy.recipe.Recipe
 import br.com.devcapu.remy.recipe.allRecipes
 
-@Preview(showSystemUi = true)
 @Composable
-fun RecipeListScreen(modifier: Modifier = Modifier) {
+fun RecipeListScreen(
+    modifier: Modifier = Modifier,
+    onClickItem: (String) -> Unit = { },
+) {
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Color.Black),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(allRecipes.size) { index ->
-            RecipeItem(allRecipes[index])
+            RecipeItem(
+                allRecipes[index],
+            ) { onClickItem(allRecipes[index].id) }
         }
     }
 }
@@ -47,9 +52,10 @@ fun RecipeListScreen(modifier: Modifier = Modifier) {
 fun RecipeItem(
     recipe: Recipe,
     modifier: Modifier = Modifier,
+    onClickItem: () -> Unit,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(true) { onClickItem() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(6.dp, Color.White),
         shape = MaterialTheme.shapes.large
@@ -111,5 +117,5 @@ fun RecipeItem(
 @Preview
 @Composable
 private fun RecipeItemPreview() {
-    RecipeItem(allRecipes[0])
+    RecipeItem(allRecipes[0]) { }
 }

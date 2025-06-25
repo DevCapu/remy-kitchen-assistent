@@ -14,13 +14,18 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 import br.com.devcapu.remy.conversation.LanguageConfigChecker
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
+import br.com.devcapu.remy.navigation.Routes
+import br.com.devcapu.remy.recipe.allRecipes
+import br.com.devcapu.remy.recipe.presentation.screen.RecipeDetailsScreen
 import br.com.devcapu.remy.recipe.presentation.screen.RecipeListScreen
 import br.com.devcapu.remy.ui.theme.RemyTheme
 
@@ -30,6 +35,9 @@ class MainActivity : ComponentActivity(), VoiceRecognitionService.VoiceRecogniti
 
     private var lastCommand by mutableStateOf<VoiceRecognitionService.VoiceCommand?>(null)
     private lateinit var voiceRecognitionService: VoiceRecognitionService
+
+    // Movendo o backStack para o nível da Activity para acessar no onCommandRecognized
+    private val backStack = mutableStateListOf<Routes>(Routes.List)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +62,37 @@ class MainActivity : ComponentActivity(), VoiceRecognitionService.VoiceRecogniti
                     floatingActionButtonPosition = FabPosition.Center,
                     containerColor = Color.Black,
                 ) { innerPadding ->
-                    RecipeListScreen(modifier = Modifier.padding(innerPadding).padding(horizontal = 16.dp, vertical = 12.dp))
+                    NavDisplay(
+                        modifier = Modifier.padding(innerPadding),
+                        backStack = backStack,
+                        onBack = { backStack.removeLastOrNull() },
+                        entryProvider = { key ->
+                            when (key) {
+                                is Routes.List -> NavEntry(key) {
+                                    RecipeListScreen(
+                                        modifier = Modifier.fillMaxSize(),
+                                        onClickItem = { recipeId ->
+                                            val recipe =
+                                                allRecipes.firstOrNull { it.id == recipeId }
+                                            if (recipe != null) {
+                                                backStack.add(Routes.Details(recipe.id))
+                                            } else {
+                                                Log.e(TAG, "Recipe not found: $recipeId")
+                                            }
+                                        }
+                                    )
+                                }
+
+                                is Routes.Details -> NavEntry(key) {
+                                    RecipeDetailsScreen(
+                                        recipe = allRecipes.firstOrNull { it.id == key.id }
+                                            ?: error("Recipe not found: ${key.id}"),
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -76,6 +114,21 @@ class MainActivity : ComponentActivity(), VoiceRecognitionService.VoiceRecogniti
 
     override fun onDestroy() {
         super.onDestroy()
-//        voiceRecognitionService.destroy()
+        voiceRecognitionService.destroy()
+    }
+
+    fun bla() {
+        val command = VoiceRecognitionService.VoiceCommand.NEXT_STEP
+        when (command) {
+            VoiceRecognitionService.VoiceCommand.NEXT_STEP -> {
+                // Seleciona uma receita aleatória e navega para seus detalhes
+                allRecipes.randomOrNull()?.let { randomRecipe ->
+                    Log.d(TAG, "Navegando para receita aleatória: ${randomRecipe.id}")
+                    backStack.add(Routes.Details(randomRecipe.id))
+                }
+            }
+
+            else -> Unit
+        }
     }
 }
