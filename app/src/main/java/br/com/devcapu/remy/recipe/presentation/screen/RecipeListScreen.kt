@@ -36,13 +36,13 @@ fun RecipeListScreen(
     onClickItem: (String) -> Unit = { },
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize().background(Color.Black),
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(allRecipes.size) { index ->
-            RecipeItem(
-                allRecipes[index],
-            ) { onClickItem(allRecipes[index].id) }
+            RecipeItem(recipe = allRecipes[index]) { onClickItem(allRecipes[index].id) }
         }
     }
 }
@@ -50,22 +50,27 @@ fun RecipeListScreen(
 
 @Composable
 fun RecipeItem(
-    recipe: Recipe,
     modifier: Modifier = Modifier,
+    chefMode: Boolean = false,
+    recipe: Recipe,
     onClickItem: () -> Unit,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth().clickable(true) { onClickItem() },
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(true) { onClickItem() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(6.dp, Color.White),
         shape = MaterialTheme.shapes.large
     ) {
-        Image(
-            modifier = Modifier.fillMaxWidth(),
-            painter = painterResource(R.drawable.virada_paulista),
-            contentDescription = "Feijoada",
-            contentScale = ContentScale.Crop
-        )
+        if (!chefMode) {
+            Image(
+                modifier = Modifier.fillMaxWidth(),
+                painter = painterResource(R.drawable.virada_paulista),
+                contentDescription = "Feijoada",
+                contentScale = ContentScale.Crop
+            )
+        }
 
         Text(
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
@@ -114,8 +119,14 @@ fun RecipeItem(
     }
 }
 
+@Preview(showSystemUi = true, showBackground = false, name = "Tela")
+@Composable
+private fun RecipeScreenPreview() {
+    RecipeListScreen()
+}
+
 @Preview
 @Composable
 private fun RecipeItemPreview() {
-    RecipeItem(allRecipes[0]) { }
+    RecipeItem(recipe = allRecipes[0]) { }
 }
