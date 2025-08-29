@@ -38,6 +38,7 @@ fun RecipeListScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .padding(horizontal = 12.dp)
             .background(Color.Black),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -79,7 +80,7 @@ fun RecipeItem(
         )
         HorizontalDivider(
             Modifier.padding(horizontal = 16.dp),
-            thickness = 2.dp
+            thickness = 1.dp
         )
 
         Row(
@@ -103,7 +104,7 @@ fun RecipeItem(
 
             VerticalDivider(
                 Modifier.height(32.dp),
-                thickness = 2.dp,
+                thickness = 1.dp,
             )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally

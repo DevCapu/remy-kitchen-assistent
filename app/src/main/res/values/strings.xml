@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Remy</string>
+    <string name="ingredients">Ingredientes</string>
+    <string name="preparation_mode">Modo de preparo</string>
+    <string name="preparation_mode_step">Modo de preparo - Passo %1$d de %2$d</string>
 </resources>
+
