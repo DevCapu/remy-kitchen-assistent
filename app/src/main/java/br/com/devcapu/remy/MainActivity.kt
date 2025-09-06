@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -36,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+
             var currentRoute by remember { mutableStateOf(backStack.lastOrNull()) }
             var isChefMode by remember { mutableStateOf(false) }
 
@@ -45,11 +48,14 @@ class MainActivity : ComponentActivity() {
                     floatingActionButton = {
                         if (currentRoute !is Routes.Details) return@Scaffold
 
-                        FloatingActionButton(onClick = { isChefMode = true }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Iniciar escuta")
+                        FloatingActionButton(onClick = { isChefMode = !isChefMode }) {
+                            Icon(
+                                imageVector = if (isChefMode) Icons.Default.Pause else Icons.Default.LocalFireDepartment,
+                                contentDescription = "Iniciar escuta"
+                            )
                         }
                     },
-                    floatingActionButtonPosition = FabPosition.Center,
+                    floatingActionButtonPosition = FabPosition.End,
                     containerColor = Color.Black,
                 ) { innerPadding ->
                     NavDisplay(

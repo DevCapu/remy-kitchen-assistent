@@ -1,7 +1,12 @@
 <resources>
     <string name="app_name">Remy</string>
-    <string name="ingredients">Ingredientes</string>
+    <string name="ingredients">Ingreentes</string>
     <string name="preparation_mode">Modo de preparo</string>
     <string name="preparation_mode_step">Modo de preparo - Passo %1$d de %2$d</string>
-</resources>
 
+    <!-- Assistente de voz -->
+    <string name="enable_voice_assistant">Ativar assistente de voz</string>
+    <string name="disable_voice_assistant">Desativar assistente de voz</string>
+    <string name="next_step">Próximo passo</string>
+    <string name="previous_step">Passo anterior</string>
+</resources>

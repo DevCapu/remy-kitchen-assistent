@@ -31,6 +31,7 @@ class VoiceRecognitionService(
 
     interface VoiceRecognitionCallback {
         fun onCommandRecognized(command: VoiceCommand)
+        fun onTextRecognized(text: String) // Added this line
         fun onError(error: String)
         fun onListeningStateChanged(isListening: Boolean)
     }
@@ -69,10 +70,6 @@ class VoiceRecognitionService(
                         override fun onBufferReceived(buffer: ByteArray?) = Unit
 
                         override fun onEndOfSpeech() {
-                            isListening = false
-                            callback.onListeningStateChanged(isListening)
-                            Log.d(TAG, "Fim da fala detectado. Reiniciando escuta...")
-                            stopListening()
                         }
 
                         override fun onError(error: Int) {
@@ -99,10 +96,10 @@ class VoiceRecognitionService(
                             matches
                                 ?.firstOrNull()
                                 ?.let { text ->
+                                    Log.d(TAG, text)
+                                    callback.onTextRecognized(text) // Added this line
                                     callback.onCommandRecognized(parseCommand(text.lowercase()))
                                 }
-                            // reinicia assim que processar resultados
-                            handler.postDelayed({ startListening() }, 300)
                         }
 
                         override fun onPartialResults(partialResults: Bundle?) = Unit
@@ -117,7 +114,7 @@ class VoiceRecognitionService(
             putExtra(EXTRA_LANGUAGE_MODEL, LANGUAGE_MODEL_FREE_FORM)
             putExtra(EXTRA_LANGUAGE, Locale("pt", "BR"))
             putExtra(EXTRA_PARTIAL_RESULTS, true)
-            putExtra(EXTRA_MAX_RESULTS, 1)
+            putExtra(EXTRA_MAX_RESULTS, 3)
             putExtra(EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 60000L)
         }
     }

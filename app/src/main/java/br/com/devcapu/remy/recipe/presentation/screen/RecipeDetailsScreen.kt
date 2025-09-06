@@ -14,26 +14,40 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.NavigateBefore
+import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
+import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.recipe.Recipe
 import br.com.devcapu.remy.recipe.allRecipes
 
@@ -43,6 +57,11 @@ fun RecipeDetailsScreen(
     recipe: Recipe = allRecipes[0],
     isChefMode: Boolean = false
 ) {
+    val context = LocalContext.current
+    val ttsService = remember { TextToSpeechService.getInstance(context) }
+    val isTtsReady by ttsService.isTtsReady.collectAsState()
+    var isVoiceAssistantEnabled by remember { mutableStateOf(true) }
+
     val ingredients = recipe.ingredients
     var selectedStepIndex by remember { mutableIntStateOf(0) }
 
@@ -54,6 +73,34 @@ fun RecipeDetailsScreen(
             } else {
                 ingredients
             }
+        }
+    }
+
+    // Função para narrar o passo atual e seus ingredientes
+    val speakCurrentStep = {
+        if (isTtsReady && isVoiceAssistantEnabled) {
+            val stepText = "Passo ${selectedStepIndex + 1} de ${recipe.steps.size}: ${recipe.steps[selectedStepIndex]}"
+            val ingredientsText = if (currentStepIngredients.isNotEmpty()) {
+                "Ingredientes necessários: " + currentStepIngredients.joinToString(", ") {
+                    "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
+                }
+            } else ""
+
+            ttsService.speak("$stepText. $ingredientsText")
+        }
+    }
+
+    // Fala o passo atual quando ele é alterado e o assistente de voz está ativado
+    LaunchedEffect(selectedStepIndex, isVoiceAssistantEnabled) {
+        if (isVoiceAssistantEnabled && isChefMode) {
+            speakCurrentStep()
+        }
+    }
+
+    // Limpar recursos do TTS quando o composable for removido
+    DisposableEffect(Unit) {
+        onDispose {
+            ttsService.stop()
         }
     }
 
@@ -132,7 +179,8 @@ fun RecipeDetailsScreen(
         ConstraintLayout(
             modifier = modifier.fillMaxSize().padding(horizontal = 12.dp)
         ) {
-            val (recipeRef, ingredientsRef, stepsRef) = createRefs()
+            val (recipeRef, ingredientsRef, stepsRef, controlsRef) = createRefs()
+
             RecipeItem(
                 modifier = Modifier.constrainAs(recipeRef) {
                     top.linkTo(parent.top, margin = 16.dp)
@@ -140,9 +188,10 @@ fun RecipeDetailsScreen(
                     end.linkTo(parent.end, margin = 16.dp)
                 },
                 recipe = recipe,
-                chefMode = isChefMode,
+                chefMode = true,
                 onClickItem = { }
             )
+
             if (hasIngredients) {
                 Card(
                     modifier = Modifier
@@ -179,6 +228,7 @@ fun RecipeDetailsScreen(
                     }
                 }
             }
+
             Card(
                 modifier = Modifier.constrainAs(stepsRef) {
                     top.linkTo(
@@ -187,7 +237,7 @@ fun RecipeDetailsScreen(
                     )
                     start.linkTo(parent.start, margin = 16.dp)
                     end.linkTo(parent.end, margin = 16.dp)
-                    bottom.linkTo(parent.bottom, margin = 16.dp)
+                    bottom.linkTo(controlsRef.top, margin = 16.dp)
                     height = Dimension.fillToConstraints
                 }
             ) {
@@ -215,6 +265,66 @@ fun RecipeDetailsScreen(
                     ) {
                         selectedStepIndex = it
                     }
+                }
+            }
+
+            // Controles de navegação e assistente de voz
+            Row(
+                modifier = Modifier
+                    .constrainAs(controlsRef) {
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        bottom.linkTo(parent.bottom, margin = 16.dp)
+                    }
+                    .fillMaxWidth()
+                    .padding(end = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Botão para voltar ao passo anterior
+                FloatingActionButton(
+                    onClick = {
+                        if (selectedStepIndex > 0) {
+                            selectedStepIndex--
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NavigateBefore,
+                        contentDescription = stringResource(R.string.previous_step)
+                    )
+                }
+
+                // Botão para ativar/desativar o assistente de voz
+                FloatingActionButton(onClick = {
+                        isVoiceAssistantEnabled = !isVoiceAssistantEnabled
+                        if (isVoiceAssistantEnabled) {
+                            speakCurrentStep()
+                        } else {
+                            ttsService.stop()
+                        }
+                    }) {
+                    Icon(
+                        imageVector = if (isVoiceAssistantEnabled) Icons.Default.Mic else Icons.Default.MicOff,
+                        contentDescription = if (isVoiceAssistantEnabled)
+                            stringResource(R.string.disable_voice_assistant)
+                        else
+                            stringResource(R.string.enable_voice_assistant)
+                    )
+                }
+
+                // Botão para avançar ao próximo passo
+                FloatingActionButton(
+                    onClick = {
+                        if (selectedStepIndex < recipe.steps.size - 1) {
+                            selectedStepIndex++
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NavigateNext,
+                        contentDescription = stringResource(R.string.next_step)
+                    )
                 }
             }
         }
