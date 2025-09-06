@@ -59,7 +59,7 @@ fun RecipeDetailsScreen(
     val context = LocalContext.current
     val ttsService = remember { TextToSpeechService.getInstance(context) }
     val isTtsReady by ttsService.isTtsReady.collectAsState()
-    var isVoiceAssistantEnabled by remember { mutableStateOf(true) }
+    var isVoiceAssistantEnabled by remember { mutableStateOf(false) }
 
     val ingredients = recipe.ingredients
     var selectedStepIndex by remember { mutableIntStateOf(0) }
