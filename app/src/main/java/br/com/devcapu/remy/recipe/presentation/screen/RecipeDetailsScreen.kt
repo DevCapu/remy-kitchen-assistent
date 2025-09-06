@@ -24,7 +24,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,7 +78,8 @@ fun RecipeDetailsScreen(
     // Função para narrar o passo atual e seus ingredientes
     val speakCurrentStep = {
         if (isTtsReady && isVoiceAssistantEnabled) {
-            val stepText = "Passo ${selectedStepIndex + 1} de ${recipe.steps.size}: ${recipe.steps[selectedStepIndex]}"
+            val stepText =
+                "Passo ${selectedStepIndex + 1} de ${recipe.steps.size}: ${recipe.steps[selectedStepIndex]}"
             val ingredientsText = if (currentStepIngredients.isNotEmpty()) {
                 "Ingredientes necessários: " + currentStepIngredients.joinToString(", ") {
                     "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
@@ -134,7 +134,10 @@ fun RecipeDetailsScreen(
                                 .padding(16.dp)
                                 .fillMaxWidth()
                         ) {
-                            Text(stringResource(R.string.ingredients), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                stringResource(R.string.ingredients),
+                                style = MaterialTheme.typography.titleMedium
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             currentStepIngredients.forEach { ingredient ->
                                 Row(
@@ -163,7 +166,10 @@ fun RecipeDetailsScreen(
                     colors = CardDefaults.cardColors(),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.preparation_mode), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(R.string.preparation_mode),
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         recipe.steps.forEachIndexed { idx, step ->
                             Text(
@@ -177,7 +183,9 @@ fun RecipeDetailsScreen(
         }
     } else {
         ConstraintLayout(
-            modifier = modifier.fillMaxSize().padding(horizontal = 12.dp)
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp)
         ) {
             val (recipeRef, ingredientsRef, stepsRef, controlsRef) = createRefs()
 
@@ -208,7 +216,10 @@ fun RecipeDetailsScreen(
                             .padding(16.dp)
                             .fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.ingredients), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(R.string.ingredients),
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         currentStepIngredients.forEach { ingredient ->
                             Row(
@@ -245,7 +256,12 @@ fun RecipeDetailsScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Text(
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 16.dp,
+                            bottom = 8.dp
+                        ),
                         text = stringResource(
                             R.string.preparation_mode_step,
                             selectedStepIndex + 1,
@@ -297,13 +313,13 @@ fun RecipeDetailsScreen(
 
                 // Botão para ativar/desativar o assistente de voz
                 FloatingActionButton(onClick = {
-                        isVoiceAssistantEnabled = !isVoiceAssistantEnabled
-                        if (isVoiceAssistantEnabled) {
-                            speakCurrentStep()
-                        } else {
-                            ttsService.stop()
-                        }
-                    }) {
+                    isVoiceAssistantEnabled = !isVoiceAssistantEnabled
+                    if (isVoiceAssistantEnabled) {
+                        speakCurrentStep()
+                    } else {
+                        ttsService.stop()
+                    }
+                }) {
                     Icon(
                         imageVector = if (isVoiceAssistantEnabled) Icons.Default.Mic else Icons.Default.MicOff,
                         contentDescription = if (isVoiceAssistantEnabled)
