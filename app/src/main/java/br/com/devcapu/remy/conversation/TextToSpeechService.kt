@@ -12,8 +12,6 @@ import java.util.UUID
 /**
  * Serviço responsável por converter texto em fala.
  * Utilizado para guiar o usuário durante o preparo da receita.
- * TODO: Trocar a voice para uma voz mais natural (ex: Google Wavenet)
- * Funcionalidades: Timer,
  */
 class TextToSpeechService(
     private val context: Context,
@@ -23,6 +21,7 @@ class TextToSpeechService(
         TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val result = tts.setLanguage(locale)
+                tts.voice = tts.voices.first { "pt-br-x-ptd-network" == it.name }
                 _isTtsReady.value = (result != TextToSpeech.LANG_MISSING_DATA &&
                         result != TextToSpeech.LANG_NOT_SUPPORTED)
             }
