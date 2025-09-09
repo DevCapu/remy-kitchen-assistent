@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,24 +27,26 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import br.com.devcapu.remy.R
+import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.devcapu.remy.recipe.Recipe
-import br.com.devcapu.remy.recipe.allRecipes
 
 @Composable
 fun RecipeListScreen(
     modifier: Modifier = Modifier,
-    onClickItem: (String) -> Unit = { },
+    onClickItem: (Recipe) -> Unit = { },
+    viewModel: RecipeListViewModel = viewModel()
 ) {
+    val recipes = viewModel.recipes.collectAsState().value
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp)
             .background(Color.Black),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(allRecipes.size) { index ->
-            RecipeItem(recipe = allRecipes[index]) { onClickItem(allRecipes[index].id) }
+        items(recipes.size) { index ->
+            RecipeItem(recipe = recipes[index]) { onClickItem(recipes[index]) }
         }
     }
 }
@@ -67,8 +70,8 @@ fun RecipeItem(
         if (!chefMode) {
             Image(
                 modifier = Modifier.fillMaxWidth(),
-                painter = painterResource(R.drawable.virada_paulista),
-                contentDescription = "Feijoada",
+                painter = painterResource(RecipeDrawableProvider.getDrawableResId(recipe.id)),
+                contentDescription = recipe.name,
                 contentScale = ContentScale.Crop
             )
         }
@@ -129,5 +132,11 @@ private fun RecipeScreenPreview() {
 @Preview
 @Composable
 private fun RecipeItemPreview() {
-    RecipeItem(recipe = allRecipes[0]) { }
+    RecipeItem(
+        recipe = Recipe(
+            name = "Preview",
+            ingredients = emptyList(),
+            steps = listOf("Passo 1", "Passo 2")
+        )
+    ) { }
 }

@@ -1,7 +1,9 @@
 package br.com.devcapu.remy.recipe
 
+import kotlinx.serialization.Serializable
 import java.util.UUID
 
+@Serializable
 data class Recipe(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
@@ -11,6 +13,7 @@ data class Recipe(
     val servings: Int? = null,
 )
 
+@Serializable
 data class Ingredient(
     val name: String,
     val quantity: String,

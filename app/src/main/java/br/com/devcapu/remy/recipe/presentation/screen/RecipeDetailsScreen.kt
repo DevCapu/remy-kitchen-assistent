@@ -48,12 +48,11 @@ import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.recipe.Recipe
-import br.com.devcapu.remy.recipe.allRecipes
 
 @Composable
 fun RecipeDetailsScreen(
     modifier: Modifier = Modifier,
-    recipe: Recipe = allRecipes[0],
+    recipe: Recipe,
     isChefMode: Boolean = false
 ) {
     val context = LocalContext.current
@@ -400,7 +399,11 @@ fun CircularList(
 @Composable
 private fun ChefModeRecipeScreenPreview() {
     RecipeDetailsScreen(
-        recipe = allRecipes[1],
+        recipe = Recipe(
+            name = "Preview",
+            ingredients = emptyList(),
+            steps = listOf("Passo 1", "Passo 2")
+        ),
         isChefMode = true
     )
 }
@@ -409,7 +412,11 @@ private fun ChefModeRecipeScreenPreview() {
 @Composable
 private fun RecipeScreenPreview() {
     RecipeDetailsScreen(
-        recipe = allRecipes[1],
+        recipe = Recipe(
+            name = "Preview",
+            ingredients = emptyList(),
+            steps = listOf("Passo 1", "Passo 2")
+        ),
         isChefMode = false
     )
 }

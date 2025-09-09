@@ -70,20 +70,15 @@ class MainActivity : ComponentActivity() {
                                 is Routes.List -> NavEntry(key) {
                                     RecipeListScreen(
                                         modifier = Modifier.fillMaxSize(),
-                                        onClickItem = { recipeId ->
-                                            allRecipes
-                                                .firstOrNull { it.id == recipeId }
-                                                ?.let {
-                                                    backStack.add(Routes.Details(recipeId))
-                                                }
+                                        onClickItem = { recipe ->
+                                            backStack.add(Routes.Details(recipe))
                                         }
                                     )
                                 }
 
                                 is Routes.Details -> NavEntry(key) {
                                     RecipeDetailsScreen(
-                                        recipe = allRecipes.firstOrNull { it.id == key.id }
-                                            ?: error("Recipe not found: ${key.id}"),
+                                        recipe = key.recipe,
                                         modifier = Modifier.fillMaxSize(),
                                         isChefMode = isChefMode
                                     )
