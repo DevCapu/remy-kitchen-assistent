@@ -22,8 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import br.com.devcapu.remy.conversation.LanguageConfigChecker
 import br.com.devcapu.remy.navigation.Routes
-import br.com.devcapu.remy.recipe.allRecipes
 import br.com.devcapu.remy.recipe.presentation.screen.RecipeDetailsScreen
 import br.com.devcapu.remy.recipe.presentation.screen.RecipeListScreen
 import br.com.devcapu.remy.ui.theme.RemyTheme
@@ -35,9 +35,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        LanguageConfigChecker.apply {
+            setPortugueseLocale(this@MainActivity, "BR")
+            showConfigurationSummary(this@MainActivity)
+        }
+
         enableEdgeToEdge()
         setContent {
-
             var currentRoute by remember { mutableStateOf(backStack.lastOrNull()) }
             var isChefMode by remember { mutableStateOf(false) }
 

@@ -1,5 +1,6 @@
 package br.com.devcapu.remy.recipe.presentation.screen
 
+import android.speech.tts.TextToSpeech
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headset
+import androidx.compose.material.icons.filled.HeadsetOff
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.NavigateBefore
@@ -47,6 +50,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.TextToSpeechService
+import br.com.devcapu.remy.conversation.VoiceRecognitionService
 import br.com.devcapu.remy.recipe.Recipe
 
 @Composable
@@ -74,7 +78,6 @@ fun RecipeDetailsScreen(
         }
     }
 
-    // Função para narrar o passo atual e seus ingredientes
     val speakCurrentStep = {
         if (isTtsReady && isVoiceAssistantEnabled) {
             val stepText =
@@ -89,14 +92,12 @@ fun RecipeDetailsScreen(
         }
     }
 
-    // Fala o passo atual quando ele é alterado e o assistente de voz está ativado
     LaunchedEffect(selectedStepIndex, isVoiceAssistantEnabled) {
         if (isVoiceAssistantEnabled && isChefMode) {
             speakCurrentStep()
         }
     }
 
-    // Limpar recursos do TTS quando o composable for removido
     DisposableEffect(Unit) {
         onDispose {
             ttsService.stop()
@@ -283,7 +284,6 @@ fun RecipeDetailsScreen(
                 }
             }
 
-            // Controles de navegação e assistente de voz
             Row(
                 modifier = Modifier
                     .constrainAs(controlsRef) {
@@ -296,7 +296,6 @@ fun RecipeDetailsScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botão para voltar ao passo anterior
                 FloatingActionButton(
                     onClick = {
                         if (selectedStepIndex > 0) {
@@ -310,7 +309,6 @@ fun RecipeDetailsScreen(
                     )
                 }
 
-                // Botão para ativar/desativar o assistente de voz
                 FloatingActionButton(onClick = {
                     isVoiceAssistantEnabled = !isVoiceAssistantEnabled
                     if (isVoiceAssistantEnabled) {
@@ -321,6 +319,71 @@ fun RecipeDetailsScreen(
                 }) {
                     Icon(
                         imageVector = if (isVoiceAssistantEnabled) Icons.Default.Mic else Icons.Default.MicOff,
+                        contentDescription = if (isVoiceAssistantEnabled)
+                            stringResource(R.string.disable_voice_assistant)
+                        else
+                            stringResource(R.string.enable_voice_assistant)
+                    )
+                }
+
+                FloatingActionButton(onClick = {
+                    val voiceRecognitionService = VoiceRecognitionService(
+                        context = context,
+                        callback = object : VoiceRecognitionService.VoiceRecognitionCallback {
+                            override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
+                                when (command) {
+                                    VoiceRecognitionService.VoiceCommand.NEXT_STEP -> {
+                                        if (selectedStepIndex < recipe.steps.size - 1) {
+                                            selectedStepIndex++
+                                        }
+                                    }
+                                    VoiceRecognitionService.VoiceCommand.PREVIOUS_STEP -> {
+                                        if (selectedStepIndex > 0) {
+                                            selectedStepIndex--
+                                        }
+                                    }
+                                    VoiceRecognitionService.VoiceCommand.REPEAT_STEP -> {
+                                        speakCurrentStep()
+                                    }
+                                    VoiceRecognitionService.VoiceCommand.INGREDIENTS -> {
+                                        if (currentStepIngredients.isNotEmpty()) {
+                                            val ingredientsText =
+                                                "Ingredientes necessários: " + currentStepIngredients.joinToString(
+                                                    ", "
+                                                ) {
+                                                    "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
+                                                }
+                                            ttsService.speak(
+                                                ingredientsText,
+                                                TextToSpeech.QUEUE_ADD
+                                            )
+                                        } else {
+                                            ttsService.speak(
+                                                "Nenhum ingrediente necessário para este passo.",
+                                                TextToSpeech.QUEUE_ADD
+                                            )
+                                        }
+                                    }
+                                    else -> {
+                                        ttsService.speak(
+                                            "Comando não reconhecido.",
+                                            TextToSpeech.QUEUE_ADD
+                                        )
+                                    }
+                                }
+                            }
+
+                            override fun onTextRecognized(text: String) = Unit
+
+                            override fun onError(error: String) = Unit
+
+                            override fun onListeningStateChanged(isListening: Boolean) = Unit
+                        }
+                    )
+                    voiceRecognitionService.startListening()
+                }) {
+                    Icon(
+                        imageVector = if (isVoiceAssistantEnabled) Icons.Default.Headset else Icons.Default.HeadsetOff,
                         contentDescription = if (isVoiceAssistantEnabled)
                             stringResource(R.string.disable_voice_assistant)
                         else

@@ -3,15 +3,12 @@ package br.com.devcapu.remy.conversation
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.RecognizerIntent.EXTRA_LANGUAGE
 import android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL
 import android.speech.RecognizerIntent.EXTRA_MAX_RESULTS
 import android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS
-import android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
 import android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
 import android.speech.SpeechRecognizer
 import android.speech.SpeechRecognizer.RESULTS_RECOGNITION
@@ -26,7 +23,6 @@ class VoiceRecognitionService(
 ) {
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
-    private val handler = Handler(Looper.getMainLooper())
     private lateinit var recognitionIntent: Intent
 
     interface VoiceRecognitionCallback {
@@ -70,6 +66,7 @@ class VoiceRecognitionService(
                         override fun onBufferReceived(buffer: ByteArray?) = Unit
 
                         override fun onEndOfSpeech() {
+                            stopListening()
                         }
 
                         override fun onError(error: Int) {
@@ -86,23 +83,28 @@ class VoiceRecognitionService(
                                 else -> "Erro desconhecido: $error"
                             }
                             Log.e(TAG, "Erro no reconhecimento: $errorMessage")
-                            callback.onError(errorMessage)
-                            // reinicia a escuta após erro
-                            handler.postDelayed({ startListening() }, 500)
+                            stopListening()
                         }
 
                         override fun onResults(results: Bundle) {
                             val matches = results.getStringArrayList(RESULTS_RECOGNITION)
-                            matches
-                                ?.firstOrNull()
-                                ?.let { text ->
-                                    Log.d(TAG, text)
-                                    callback.onTextRecognized(text) // Added this line
-                                    callback.onCommandRecognized(parseCommand(text.lowercase()))
-                                }
+                            if (matches != null && matches.isNotEmpty()) {
+                                val command = matches[0]
+                                callback.onCommandRecognized(parseCommand(command))
+                                Log.d("RecipeDetailsScreen", "onResults: $command")
+                            }
                         }
 
-                        override fun onPartialResults(partialResults: Bundle?) = Unit
+                        override fun onPartialResults(partialResults: Bundle?) {
+                            val matches = partialResults?.getStringArrayList(RESULTS_RECOGNITION)
+                            if (matches != null && matches.isNotEmpty()) {
+                                Log.d(
+                                    this@VoiceRecognitionService.javaClass.simpleName,
+                                    "onPartialResults: ${matches[0]}"
+                                )
+                            }
+                        }
+
                         override fun onEvent(eventType: Int, params: Bundle?) = Unit
                     })
                 }
@@ -114,8 +116,7 @@ class VoiceRecognitionService(
             putExtra(EXTRA_LANGUAGE_MODEL, LANGUAGE_MODEL_FREE_FORM)
             putExtra(EXTRA_LANGUAGE, Locale("pt", "BR"))
             putExtra(EXTRA_PARTIAL_RESULTS, true)
-            putExtra(EXTRA_MAX_RESULTS, 3)
-            putExtra(EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 60000L)
+            putExtra(EXTRA_MAX_RESULTS, 1)
         }
     }
 
@@ -133,23 +134,27 @@ class VoiceRecognitionService(
         }
     }
 
-    private fun parseCommand(text: String): VoiceCommand {
-        return when {
-            text.contains("próximo") || text.contains("proximo") -> VoiceCommand.NEXT_STEP
-            text.contains("anterior") || text.contains("volta") -> VoiceCommand.PREVIOUS_STEP
-            text.contains("ingredientes") -> VoiceCommand.INGREDIENTS
-            text.contains("repetir") || text.contains("repete") -> VoiceCommand.REPEAT_STEP
-            text.contains("timer") || text.contains("cronômetro") || text.contains("cronometro") -> {
-                if (text.contains("parar") || text.contains("pausar") || text.contains("cancelar")) {
-                    VoiceCommand.STOP_TIMER
-                } else {
-                    VoiceCommand.START_TIMER
-                }
+    private fun parseCommand(text: String) = when {
+        text.contains("próximo") || text.contains("proximo") -> VoiceCommand.NEXT_STEP
+        text.contains("anterior") || text.contains("volta") -> VoiceCommand.PREVIOUS_STEP
+        text.contains("ingredientes") -> VoiceCommand.INGREDIENTS
+        text.contains("repetir") || text.contains("repete") -> VoiceCommand.REPEAT_STEP
+        text.contains("timer") || text.contains("cronômetro") || text.contains("cronometro") -> {
+            if (text.contains("parar") || text.contains("pausar") || text.contains("cancelar")) {
+                VoiceCommand.STOP_TIMER
+            } else {
+                VoiceCommand.START_TIMER
             }
-            else -> VoiceCommand.UNKNOWN
         }
+
+        else -> VoiceCommand.UNKNOWN
     }
 
+
+    /**
+     * Aqui acho que deveria ser atrelado ao ciclo de vida da Application, ai podemos chamar esse
+     * método no onTerminate() da Application.
+     */
     fun destroy() {
         speechRecognizer?.destroy()
         speechRecognizer = null
