@@ -55,18 +55,20 @@ class VoiceRecognitionService(
                         override fun onReadyForSpeech(params: Bundle?) {
                             isListening = true
                             callback.onListeningStateChanged(true)
-                            Log.d(TAG, "Começando a escuta...")
+                            Log.d(TAG, "🎤 Speech Recognition: Pronto para escutar")
                         }
 
                         override fun onBeginningOfSpeech() {
-                            Log.d(TAG, "Início da fala detectado.")
+                            Log.d(TAG, "🎤 Speech Recognition: Detectou início de fala")
                         }
 
                         override fun onRmsChanged(rmsdB: Float) = Unit
                         override fun onBufferReceived(buffer: ByteArray?) = Unit
 
                         override fun onEndOfSpeech() {
-                            stopListening()
+                            Log.d(TAG, "🎤 Speech Recognition: Detectou fim de fala")
+                            isListening = false
+                            callback.onListeningStateChanged(false)
                         }
 
                         override fun onError(error: Int) {
@@ -80,18 +82,23 @@ class VoiceRecognitionService(
                                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Reconhecedor ocupado"
                                 SpeechRecognizer.ERROR_SERVER -> "Erro do servidor"
                                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Timeout de fala"
-                                else -> "Erro desconhecido: $error"
+                                else -> error
                             }
-                            Log.e(TAG, "Erro no reconhecimento: $errorMessage")
-                            stopListening()
+                            Log.e(TAG, "🎤 Speech Recognition: Erro - $errorMessage")
+                            callback.onError(error.toString())
                         }
 
                         override fun onResults(results: Bundle) {
                             val matches = results.getStringArrayList(RESULTS_RECOGNITION)
-                            if (matches != null && matches.isNotEmpty()) {
+                            if (!matches.isNullOrEmpty()) {
                                 val command = matches[0]
-                                callback.onCommandRecognized(parseCommand(command))
-                                Log.d("RecipeDetailsScreen", "onResults: $command")
+                                Log.d(TAG, "🎤 Speech Recognition: Comando reconhecido - '$command'")
+                                val parsedCommand = parseCommand(command)
+                                Log.d(
+                                    TAG,
+                                    "🎤 Speech Recognition: Comando interpretado - $parsedCommand"
+                                )
+                                callback.onCommandRecognized(parsedCommand)
                             }
                         }
 
@@ -121,17 +128,15 @@ class VoiceRecognitionService(
     }
 
     fun startListening() {
-        if (!isListening && speechRecognizer != null) {
-            speechRecognizer?.startListening(recognitionIntent)
-        }
+        Log.d(TAG, "🎤 Controle do microfone: Speech Recognition está assumindo o controle")
+        speechRecognizer?.startListening(recognitionIntent)
     }
 
     fun stopListening() {
-        if (isListening) {
-            speechRecognizer?.stopListening()
-            isListening = false
-            callback.onListeningStateChanged(false)
-        }
+        Log.d(TAG, "🎤 Controle do microfone: Speech Recognition está liberando o controle")
+        speechRecognizer?.stopListening()
+        isListening = false
+        callback.onListeningStateChanged(false)
     }
 
     private fun parseCommand(text: String) = when {

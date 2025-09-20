@@ -1,5 +1,6 @@
 package br.com.devcapu.remy.recipe.presentation.screen
 
+import ai.picovoice.porcupine.PorcupineManager
 import android.speech.tts.TextToSpeech
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -51,6 +52,7 @@ import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
+import br.com.devcapu.remy.infra.PorcupineManagerSingleton
 import br.com.devcapu.remy.recipe.Recipe
 
 @Composable
@@ -91,6 +93,71 @@ fun RecipeDetailsScreen(
             ttsService.speak("$stepText. $ingredientsText")
         }
     }
+
+    var porcupineManager by remember { mutableStateOf<PorcupineManager?>(null) }
+    var porcupineIsListening by remember { mutableStateOf(false) }
+
+    val voiceRecognitionCallback = object : VoiceRecognitionService.VoiceRecognitionCallback {
+        override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
+            when (command) {
+                VoiceRecognitionService.VoiceCommand.NEXT_STEP -> {
+                    if (selectedStepIndex < recipe.steps.size - 1) {
+                        selectedStepIndex++
+                    }
+                }
+
+                VoiceRecognitionService.VoiceCommand.PREVIOUS_STEP -> {
+                    if (selectedStepIndex > 0) {
+                        selectedStepIndex--
+                    }
+                }
+
+                VoiceRecognitionService.VoiceCommand.REPEAT_STEP -> {
+                    speakCurrentStep()
+                }
+
+                VoiceRecognitionService.VoiceCommand.INGREDIENTS -> {
+                    if (currentStepIngredients.isNotEmpty()) {
+                        val ingredientsText =
+                            "Ingredientes necessários: " + currentStepIngredients.joinToString(
+                                ", "
+                            ) {
+                                "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
+                            }
+                        ttsService.speak(
+                            ingredientsText,
+                            TextToSpeech.QUEUE_ADD
+                        )
+                    } else {
+                        ttsService.speak(
+                            "Nenhum ingrediente necessário para este passo.",
+                            TextToSpeech.QUEUE_ADD
+                        )
+                    }
+                }
+
+                else -> {
+                    ttsService.speak(
+                        "Comando não reconhecido.",
+                        TextToSpeech.QUEUE_ADD
+                    )
+                }
+            }
+            porcupineManager?.start()
+            porcupineIsListening = true
+        }
+
+        override fun onTextRecognized(text: String) = Unit
+
+        override fun onError(error: String) {
+            porcupineManager?.start()
+            porcupineIsListening = true
+        }
+
+        override fun onListeningStateChanged(isListening: Boolean) = Unit
+    }
+    val voiceRecognitionService = VoiceRecognitionService(context, voiceRecognitionCallback)
+    porcupineManager = PorcupineManagerSingleton.getInstance(context, voiceRecognitionService)
 
     LaunchedEffect(selectedStepIndex, isVoiceAssistantEnabled) {
         if (isVoiceAssistantEnabled && isChefMode) {
@@ -326,64 +393,18 @@ fun RecipeDetailsScreen(
                     )
                 }
 
-                FloatingActionButton(onClick = {
-                    val voiceRecognitionService = VoiceRecognitionService(
-                        context = context,
-                        callback = object : VoiceRecognitionService.VoiceRecognitionCallback {
-                            override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
-                                when (command) {
-                                    VoiceRecognitionService.VoiceCommand.NEXT_STEP -> {
-                                        if (selectedStepIndex < recipe.steps.size - 1) {
-                                            selectedStepIndex++
-                                        }
-                                    }
-                                    VoiceRecognitionService.VoiceCommand.PREVIOUS_STEP -> {
-                                        if (selectedStepIndex > 0) {
-                                            selectedStepIndex--
-                                        }
-                                    }
-                                    VoiceRecognitionService.VoiceCommand.REPEAT_STEP -> {
-                                        speakCurrentStep()
-                                    }
-                                    VoiceRecognitionService.VoiceCommand.INGREDIENTS -> {
-                                        if (currentStepIngredients.isNotEmpty()) {
-                                            val ingredientsText =
-                                                "Ingredientes necessários: " + currentStepIngredients.joinToString(
-                                                    ", "
-                                                ) {
-                                                    "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
-                                                }
-                                            ttsService.speak(
-                                                ingredientsText,
-                                                TextToSpeech.QUEUE_ADD
-                                            )
-                                        } else {
-                                            ttsService.speak(
-                                                "Nenhum ingrediente necessário para este passo.",
-                                                TextToSpeech.QUEUE_ADD
-                                            )
-                                        }
-                                    }
-                                    else -> {
-                                        ttsService.speak(
-                                            "Comando não reconhecido.",
-                                            TextToSpeech.QUEUE_ADD
-                                        )
-                                    }
-                                }
-                            }
+                FloatingActionButton(
+                    onClick = {
+                        porcupineIsListening = !porcupineIsListening
+                        if (porcupineIsListening) {
+                            porcupineManager?.start()
+                        } else {
+                            porcupineManager?.stop()
 
-                            override fun onTextRecognized(text: String) = Unit
-
-                            override fun onError(error: String) = Unit
-
-                            override fun onListeningStateChanged(isListening: Boolean) = Unit
                         }
-                    )
-                    voiceRecognitionService.startListening()
-                }) {
+                    }) {
                     Icon(
-                        imageVector = if (isVoiceAssistantEnabled) Icons.Default.Headset else Icons.Default.HeadsetOff,
+                        imageVector = if (porcupineIsListening) Icons.Default.Headset else Icons.Default.HeadsetOff,
                         contentDescription = if (isVoiceAssistantEnabled)
                             stringResource(R.string.disable_voice_assistant)
                         else

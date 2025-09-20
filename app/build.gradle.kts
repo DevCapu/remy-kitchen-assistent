@@ -16,7 +16,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        val porcupineApiKey = System.getenv("PORCUPINE_API_KEY")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "PORCUPINE_API_KEY", "\"${porcupineApiKey}\"")
     }
 
     buildTypes {
@@ -37,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -69,4 +72,5 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.compose.runtime.livedata)
+    implementation(libs.porcupine)
 }
