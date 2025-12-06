@@ -1,4 +1,4 @@
-package br.com.devcapu.remy.recipe.presentation.screen
+package br.com.devcapu.remy.presentation.recipe.screen
 
 import ai.picovoice.porcupine.PorcupineManager
 import android.speech.tts.TextToSpeech
@@ -53,7 +53,7 @@ import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
 import br.com.devcapu.remy.infra.PorcupineManagerSingleton
-import br.com.devcapu.remy.recipe.Recipe
+import br.com.devcapu.remy.data.recipe.Recipe
 
 @Composable
 fun RecipeDetailsScreen(

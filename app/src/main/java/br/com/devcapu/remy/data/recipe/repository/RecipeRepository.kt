@@ -1,5 +1,6 @@
-package br.com.devcapu.remy.recipe
+package br.com.devcapu.remy.data.recipe.repository
 
+import br.com.devcapu.remy.data.recipe.Recipe
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation

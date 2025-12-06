@@ -19,7 +19,7 @@ object PorcupineManagerSingleton {
         if (porcupineManager == null) {
             Log.d(TAG, "🎤 Porcupine: Inicializando pela primeira vez")
             porcupineManager = PorcupineManager.Builder()
-                .setAccessKey(BuildConfig.PORCUPINE_API_KEY)
+                .setAccessKey("+7TLL4X54MnicGk+a6UO+OQpBiR0QNN7adeumAxW7gut3rJEgDF0HA==")
                 .setKeywords(arrayOf(Porcupine.BuiltInKeyword.COMPUTER))
                 .build(context) {
                     Log.d(TAG, "🎤 Porcupine: Palavra de ativação detectada!")

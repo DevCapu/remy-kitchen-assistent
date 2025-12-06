@@ -1,4 +1,4 @@
-package br.com.devcapu.remy.recipe
+package br.com.devcapu.remy.data.recipe
 
 import kotlinx.serialization.Serializable
 import java.util.UUID

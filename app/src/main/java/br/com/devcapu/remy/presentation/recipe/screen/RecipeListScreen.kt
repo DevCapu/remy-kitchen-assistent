@@ -1,4 +1,4 @@
-package br.com.devcapu.remy.recipe.presentation.screen
+package br.com.devcapu.remy.presentation.recipe.screen
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -28,7 +28,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import br.com.devcapu.remy.recipe.Recipe
+import br.com.devcapu.remy.presentation.recipe.provider.RecipeDrawableProvider
+import br.com.devcapu.remy.data.recipe.Recipe
+import br.com.devcapu.remy.presentation.recipe.viewmodel.RecipeListViewModel
 
 @Composable
 fun RecipeListScreen(
@@ -37,6 +39,19 @@ fun RecipeListScreen(
     viewModel: RecipeListViewModel = viewModel()
 ) {
     val recipes = viewModel.recipes.collectAsState().value
+    RecipeListScreen(
+        recipes = recipes,
+        modifier = modifier,
+        onClickItem = onClickItem
+    )
+}
+
+@Composable
+fun RecipeListScreen(
+    recipes: List<Recipe>,
+    modifier: Modifier = Modifier,
+    onClickItem: (Recipe) -> Unit = { }
+) {
     LazyColumn(
         modifier = modifier
             .fillMaxSize()

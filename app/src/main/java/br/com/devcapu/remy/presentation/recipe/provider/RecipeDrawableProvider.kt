@@ -1,4 +1,4 @@
-package br.com.devcapu.remy.recipe.presentation.screen
+package br.com.devcapu.remy.presentation.recipe.provider
 
 import br.com.devcapu.remy.R
 
@@ -15,4 +15,3 @@ object RecipeDrawableProvider {
         return recipeDrawableMap[recipeId] ?: R.drawable.ic_launcher_background
     }
 }
-

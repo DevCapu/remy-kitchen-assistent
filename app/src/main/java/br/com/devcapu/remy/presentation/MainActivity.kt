@@ -1,4 +1,4 @@
-package br.com.devcapu.remy
+package br.com.devcapu.remy.presentation
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -24,8 +24,8 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import br.com.devcapu.remy.conversation.LanguageConfigChecker
 import br.com.devcapu.remy.navigation.Routes
-import br.com.devcapu.remy.recipe.presentation.screen.RecipeDetailsScreen
-import br.com.devcapu.remy.recipe.presentation.screen.RecipeListScreen
+import br.com.devcapu.remy.presentation.recipe.screen.RecipeDetailsScreen
+import br.com.devcapu.remy.presentation.recipe.screen.RecipeListScreen
 import br.com.devcapu.remy.ui.theme.RemyTheme
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
 
             RemyTheme {
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.Companion.fillMaxSize(),
                     floatingActionButton = {
                         if (currentRoute !is Routes.Details) return@Scaffold
 
@@ -58,11 +58,11 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     },
-                    floatingActionButtonPosition = FabPosition.End,
-                    containerColor = Color.Black,
+                    floatingActionButtonPosition = FabPosition.Companion.End,
+                    containerColor = Color.Companion.Black,
                 ) { innerPadding ->
                     NavDisplay(
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier.Companion.padding(innerPadding),
                         backStack = backStack,
                         onBack = {
                             backStack.removeLastOrNull()
@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                             when (key) {
                                 is Routes.List -> NavEntry(key) {
                                     RecipeListScreen(
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier.Companion.fillMaxSize(),
                                         onClickItem = { recipe ->
                                             backStack.add(Routes.Details(recipe))
                                         }
@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
                                 is Routes.Details -> NavEntry(key) {
                                     RecipeDetailsScreen(
                                         recipe = key.recipe,
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier.Companion.fillMaxSize(),
                                         isChefMode = isChefMode
                                     )
                                 }
