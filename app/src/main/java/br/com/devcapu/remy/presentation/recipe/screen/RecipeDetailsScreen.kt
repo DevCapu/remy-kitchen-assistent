@@ -31,9 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
-import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
 import br.com.devcapu.remy.infra.PorcupineManagerSingleton
 import br.com.devcapu.remy.data.recipe.Recipe
@@ -59,11 +56,12 @@ import br.com.devcapu.remy.data.recipe.Recipe
 fun RecipeDetailsScreen(
     modifier: Modifier = Modifier,
     recipe: Recipe,
-    isChefMode: Boolean = false
+    isChefMode: Boolean = false,
+    canSpeak: Boolean = false,
+    onSpeak: (String, Int) -> Unit = { _, _ -> },
+    onStopSpeaking: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val ttsService = remember { TextToSpeechService.getInstance(context) }
-    val isTtsReady by ttsService.isTtsReady.collectAsState()
     var isVoiceAssistantEnabled by remember { mutableStateOf(false) }
 
     val ingredients = recipe.ingredients
@@ -80,8 +78,9 @@ fun RecipeDetailsScreen(
         }
     }
 
+
     val speakCurrentStep = {
-        if (isTtsReady && isVoiceAssistantEnabled) {
+        if (canSpeak && isVoiceAssistantEnabled) {
             val stepText =
                 "Passo ${selectedStepIndex + 1} de ${recipe.steps.size}: ${recipe.steps[selectedStepIndex]}"
             val ingredientsText = if (currentStepIngredients.isNotEmpty()) {
@@ -90,7 +89,7 @@ fun RecipeDetailsScreen(
                 }
             } else ""
 
-            ttsService.speak("$stepText. $ingredientsText")
+            onSpeak("$stepText. $ingredientsText", TextToSpeech.QUEUE_FLUSH)
         }
     }
 
@@ -124,12 +123,12 @@ fun RecipeDetailsScreen(
                             ) {
                                 "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
                             }
-                        ttsService.speak(
+                        onSpeak(
                             ingredientsText,
                             TextToSpeech.QUEUE_ADD
                         )
                     } else {
-                        ttsService.speak(
+                        onSpeak(
                             "Nenhum ingrediente necessário para este passo.",
                             TextToSpeech.QUEUE_ADD
                         )
@@ -137,7 +136,7 @@ fun RecipeDetailsScreen(
                 }
 
                 else -> {
-                    ttsService.speak(
+                    onSpeak(
                         "Comando não reconhecido.",
                         TextToSpeech.QUEUE_ADD
                     )
@@ -165,11 +164,6 @@ fun RecipeDetailsScreen(
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            ttsService.stop()
-        }
-    }
 
     val hasIngredients = currentStepIngredients.isNotEmpty()
 
@@ -381,7 +375,7 @@ fun RecipeDetailsScreen(
                     if (isVoiceAssistantEnabled) {
                         speakCurrentStep()
                     } else {
-                        ttsService.stop()
+                        onStopSpeaking()
                     }
                 }) {
                     Icon(

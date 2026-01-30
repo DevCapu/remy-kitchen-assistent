@@ -13,6 +13,7 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import br.com.devcapu.remy.conversation.LanguageConfigChecker
+import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.navigation.Routes
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeDetailsScreen
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeListScreen
@@ -45,9 +47,12 @@ class MainActivity : ComponentActivity() {
             var currentRoute by remember { mutableStateOf(backStack.lastOrNull()) }
             var isChefMode by remember { mutableStateOf(false) }
 
+            val ttsService = remember { TextToSpeechService.getInstance(this) }
+            val canSpeak by ttsService.isTtsReady.collectAsState()
+
             RemyTheme {
                 Scaffold(
-                    modifier = Modifier.Companion.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     floatingActionButton = {
                         if (currentRoute !is Routes.Details) return@Scaffold
 
@@ -58,22 +63,23 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     },
-                    floatingActionButtonPosition = FabPosition.Companion.End,
-                    containerColor = Color.Companion.Black,
+                    floatingActionButtonPosition = FabPosition.End,
+                    containerColor = Color.Black,
                 ) { innerPadding ->
                     NavDisplay(
-                        modifier = Modifier.Companion.padding(innerPadding),
+                        modifier = Modifier.padding(innerPadding),
                         backStack = backStack,
                         onBack = {
                             backStack.removeLastOrNull()
                             isChefMode = false
+                            ttsService.stop()
                         },
                         entryProvider = { key ->
                             currentRoute = key
                             when (key) {
                                 is Routes.List -> NavEntry(key) {
                                     RecipeListScreen(
-                                        modifier = Modifier.Companion.fillMaxSize(),
+                                        modifier = Modifier.fillMaxSize(),
                                         onClickItem = { recipe ->
                                             backStack.add(Routes.Details(recipe))
                                         }
@@ -83,8 +89,11 @@ class MainActivity : ComponentActivity() {
                                 is Routes.Details -> NavEntry(key) {
                                     RecipeDetailsScreen(
                                         recipe = key.recipe,
-                                        modifier = Modifier.Companion.fillMaxSize(),
-                                        isChefMode = isChefMode
+                                        modifier = Modifier.fillMaxSize(),
+                                        isChefMode = isChefMode,
+                                        canSpeak = canSpeak,
+                                        onSpeak = { text, queueMode -> ttsService.speak(text, queueMode) },
+                                        onStopSpeaking = { ttsService.stop() }
                                     )
                                 }
                             }
