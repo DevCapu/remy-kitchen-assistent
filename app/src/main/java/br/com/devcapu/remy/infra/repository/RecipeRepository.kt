@@ -1,4 +1,4 @@
-package br.com.devcapu.remy.data.recipe.repository
+package br.com.devcapu.remy.infra.repository
 
 import br.com.devcapu.remy.data.recipe.Recipe
 import io.ktor.client.HttpClient

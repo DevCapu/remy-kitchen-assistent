@@ -3,7 +3,7 @@ package br.com.devcapu.remy.presentation.recipe.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.devcapu.remy.data.recipe.Recipe
-import br.com.devcapu.remy.data.recipe.repository.RecipeRepository
+import br.com.devcapu.remy.infra.repository.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

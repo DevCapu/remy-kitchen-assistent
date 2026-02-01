@@ -1,6 +1,5 @@
 package br.com.devcapu.remy.presentation.recipe.screen
 
-import ai.picovoice.porcupine.PorcupineManager
 import android.speech.tts.TextToSpeech
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -41,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,7 +47,6 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
-import br.com.devcapu.remy.infra.PorcupineManagerSingleton
 import br.com.devcapu.remy.data.recipe.Recipe
 
 @Composable
@@ -59,9 +56,12 @@ fun RecipeDetailsScreen(
     isChefMode: Boolean = false,
     canSpeak: Boolean = false,
     onSpeak: (String, Int) -> Unit = { _, _ -> },
-    onStopSpeaking: () -> Unit = {}
+    onStopSpeaking: () -> Unit = {},
+    isListening: Boolean = false,
+    onToggleListening: () -> Unit = {},
+    voiceCommand: VoiceRecognitionService.VoiceCommand? = null,
+    onVoiceCommandHandled: () -> Unit = {}
 ) {
-    val context = LocalContext.current
     var isVoiceAssistantEnabled by remember { mutableStateOf(false) }
 
     val ingredients = recipe.ingredients
@@ -78,7 +78,6 @@ fun RecipeDetailsScreen(
         }
     }
 
-
     val speakCurrentStep = {
         if (canSpeak && isVoiceAssistantEnabled) {
             val stepText =
@@ -93,11 +92,9 @@ fun RecipeDetailsScreen(
         }
     }
 
-    var porcupineManager by remember { mutableStateOf<PorcupineManager?>(null) }
-    var porcupineIsListening by remember { mutableStateOf(false) }
-
-    val voiceRecognitionCallback = object : VoiceRecognitionService.VoiceRecognitionCallback {
-        override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
+    // Handle voice commands from MainActivity
+    LaunchedEffect(voiceCommand) {
+        voiceCommand?.let { command ->
             when (command) {
                 VoiceRecognitionService.VoiceCommand.NEXT_STEP -> {
                     if (selectedStepIndex < recipe.steps.size - 1) {
@@ -142,28 +139,15 @@ fun RecipeDetailsScreen(
                     )
                 }
             }
-            porcupineManager?.start()
-            porcupineIsListening = true
+            onVoiceCommandHandled()
         }
-
-        override fun onTextRecognized(text: String) = Unit
-
-        override fun onError(error: String) {
-            porcupineManager?.start()
-            porcupineIsListening = true
-        }
-
-        override fun onListeningStateChanged(isListening: Boolean) = Unit
     }
-    val voiceRecognitionService = VoiceRecognitionService(context, voiceRecognitionCallback)
-    porcupineManager = PorcupineManagerSingleton.getInstance(context, voiceRecognitionService)
 
     LaunchedEffect(selectedStepIndex, isVoiceAssistantEnabled) {
         if (isVoiceAssistantEnabled && isChefMode) {
             speakCurrentStep()
         }
     }
-
 
     val hasIngredients = currentStepIngredients.isNotEmpty()
 
@@ -388,18 +372,11 @@ fun RecipeDetailsScreen(
                 }
 
                 FloatingActionButton(
-                    onClick = {
-                        porcupineIsListening = !porcupineIsListening
-                        if (porcupineIsListening) {
-                            porcupineManager?.start()
-                        } else {
-                            porcupineManager?.stop()
-
-                        }
-                    }) {
+                    onClick = { onToggleListening() }
+                ) {
                     Icon(
-                        imageVector = if (porcupineIsListening) Icons.Default.Headset else Icons.Default.HeadsetOff,
-                        contentDescription = if (isVoiceAssistantEnabled)
+                        imageVector = if (isListening) Icons.Default.Headset else Icons.Default.HeadsetOff,
+                        contentDescription = if (isListening)
                             stringResource(R.string.disable_voice_assistant)
                         else
                             stringResource(R.string.enable_voice_assistant)

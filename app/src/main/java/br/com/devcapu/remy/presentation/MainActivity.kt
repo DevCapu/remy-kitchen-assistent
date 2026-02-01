@@ -1,5 +1,6 @@
 package br.com.devcapu.remy.presentation
 
+import ai.picovoice.porcupine.PorcupineManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,6 +26,8 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import br.com.devcapu.remy.conversation.LanguageConfigChecker
 import br.com.devcapu.remy.conversation.TextToSpeechService
+import br.com.devcapu.remy.conversation.VoiceRecognitionService
+import br.com.devcapu.remy.infra.PorcupineManagerSingleton
 import br.com.devcapu.remy.navigation.Routes
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeDetailsScreen
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeListScreen
@@ -46,9 +49,24 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentRoute by remember { mutableStateOf(backStack.lastOrNull()) }
             var isChefMode by remember { mutableStateOf(false) }
-
             val ttsService = remember { TextToSpeechService.getInstance(this) }
             val canSpeak by ttsService.isTtsReady.collectAsState()
+            var isListening by remember { mutableStateOf(false) }
+            var voiceCommand by remember { mutableStateOf<VoiceRecognitionService.VoiceCommand?>(null) }
+            val voiceRecognitionCallback = remember {
+                object : VoiceRecognitionService.VoiceRecognitionCallback {
+                    override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
+                        voiceCommand = command
+                    }
+                    override fun onTextRecognized(text: String) = Unit
+                    override fun onError(error: String) {
+
+                    }
+                    override fun onListeningStateChanged(listening: Boolean) = Unit
+                }
+            }
+            val voiceRecognitionService = remember { VoiceRecognitionService(this, voiceRecognitionCallback) }
+            val porcupineManager: PorcupineManager = remember { PorcupineManagerSingleton.getInstance(this, voiceRecognitionService) }
 
             RemyTheme {
                 Scaffold(
@@ -73,6 +91,8 @@ class MainActivity : ComponentActivity() {
                             backStack.removeLastOrNull()
                             isChefMode = false
                             ttsService.stop()
+                            porcupineManager.stop()
+                            isListening = false
                         },
                         entryProvider = { key ->
                             currentRoute = key
@@ -93,7 +113,21 @@ class MainActivity : ComponentActivity() {
                                         isChefMode = isChefMode,
                                         canSpeak = canSpeak,
                                         onSpeak = { text, queueMode -> ttsService.speak(text, queueMode) },
-                                        onStopSpeaking = { ttsService.stop() }
+                                        onStopSpeaking = { ttsService.stop() },
+                                        isListening = isListening,
+                                        onToggleListening = {
+                                            isListening = !isListening
+                                            if (isListening) {
+                                                porcupineManager.start()
+                                            } else {
+                                                porcupineManager.stop()
+                                            }
+                                        },
+                                        voiceCommand = voiceCommand,
+                                        onVoiceCommandHandled = {
+                                            voiceCommand = null
+                                            porcupineManager.start()
+                                        }
                                     )
                                 }
                             }
