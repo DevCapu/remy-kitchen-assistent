@@ -29,13 +29,15 @@ import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
 import br.com.devcapu.remy.infra.PorcupineManagerSingleton
 import br.com.devcapu.remy.navigation.Routes
+import br.com.devcapu.remy.presentation.auth.screen.LoginScreen
+import br.com.devcapu.remy.presentation.auth.screen.SignUpScreen
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeDetailsScreen
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeListScreen
 import br.com.devcapu.remy.ui.theme.RemyTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val backStack = mutableStateListOf<Routes>(Routes.List)
+    private val backStack = mutableStateListOf<Routes>(Routes.Login)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,6 +99,34 @@ class MainActivity : ComponentActivity() {
                         entryProvider = { key ->
                             currentRoute = key
                             when (key) {
+                                is Routes.Login -> NavEntry(key) {
+                                    LoginScreen(
+                                        modifier = Modifier.fillMaxSize(),
+                                        onLoginSuccess = {
+                                            backStack.clear()
+                                            backStack.add(Routes.List)
+                                        },
+                                        onNavigateToSignUp = {
+                                            backStack.clear()
+                                            backStack.add(Routes.SignUp)
+                                        }
+                                    )
+                                }
+
+                                is Routes.SignUp -> NavEntry(key) {
+                                    SignUpScreen(
+                                        modifier = Modifier.fillMaxSize(),
+                                        onSignUpSuccess = {
+                                            backStack.clear()
+                                            backStack.add(Routes.List)
+                                        },
+                                        onNavigateToLogin = {
+                                            backStack.clear()
+                                            backStack.add(Routes.Login)
+                                        }
+                                    )
+                                }
+
                                 is Routes.List -> NavEntry(key) {
                                     RecipeListScreen(
                                         modifier = Modifier.fillMaxSize(),

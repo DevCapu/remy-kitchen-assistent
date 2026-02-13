@@ -1,0 +1,38 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Format, Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup do Cache do Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Conceder permissão de execução ao Gradle
+        run: chmod +x gradlew
+
+      - name: Validar Formatação do Código
+        # Substitua por ./gradlew spotlessCheck se estiver usando Spotless
+        run: ./gradlew ktlintCheck
+
+      - name: Executar Testes de Unidade
+        run: ./gradlew testDebugUnitTest
+
+      - name: Compilar APK de Debug
+        run: ./gradlew assembleDebug

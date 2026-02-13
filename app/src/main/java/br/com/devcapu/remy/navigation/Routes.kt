@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed class Routes: NavKey {
+    object Login : Routes()
+    object SignUp : Routes()
     object List : Routes()
     class Details(val recipe: Recipe) : Routes()
 }
