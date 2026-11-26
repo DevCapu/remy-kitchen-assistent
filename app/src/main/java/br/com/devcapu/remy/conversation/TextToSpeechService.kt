@@ -15,15 +15,17 @@ import java.util.UUID
  */
 class TextToSpeechService(
     private val context: Context,
-    locale: Locale = Locale("pt", "BR")
+    locale: Locale = Locale("pt", "BR"),
 ) {
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val result = tts.setLanguage(locale)
                 tts.voice = tts.voices.first { "pt-br-x-ptd-network" == it.name }
-                _isTtsReady.value = (result != TextToSpeech.LANG_MISSING_DATA &&
-                        result != TextToSpeech.LANG_NOT_SUPPORTED)
+                _isTtsReady.value = (
+                    result != TextToSpeech.LANG_MISSING_DATA &&
+                        result != TextToSpeech.LANG_NOT_SUPPORTED
+                )
             }
         }
     }
@@ -39,20 +41,36 @@ class TextToSpeechService(
     }
 
     private fun setupTtsListener() {
-        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                _isSpeaking.value = true
-            }
+        tts.setOnUtteranceProgressListener(
+            object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    _isSpeaking.value = true
+                }
 
-            override fun onDone(utteranceId: String?) {
-                _isSpeaking.value = false
-            }
+                override fun onDone(utteranceId: String?) {
+                    _isSpeaking.value = false
+                }
 
-            @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) {
-                _isSpeaking.value = false
-            }
-        })
+                override fun onStop(
+                    utteranceId: String?,
+                    interrupted: Boolean,
+                ) {
+                    _isSpeaking.value = false
+                }
+
+                override fun onError(
+                    utteranceId: String?,
+                    errorCode: Int,
+                ) {
+                    _isSpeaking.value = false
+                }
+
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) {
+                    _isSpeaking.value = false
+                }
+            },
+        )
     }
 
     /**
@@ -60,7 +78,10 @@ class TextToSpeechService(
      * @param text Texto a ser falado
      * @param queueMode Modo de enfileiramento (QUEUE_FLUSH para interromper a fala atual, QUEUE_ADD para adicionar à fila)
      */
-    fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_FLUSH) {
+    fun speak(
+        text: String,
+        queueMode: Int = TextToSpeech.QUEUE_FLUSH,
+    ) {
         if (_isTtsReady.value) {
             val utteranceId = UUID.randomUUID().toString()
             tts.speak(text, queueMode, null, utteranceId)
@@ -73,8 +94,8 @@ class TextToSpeechService(
     fun stop() {
         if (tts.isSpeaking) {
             tts.stop()
-            _isSpeaking.value = false
         }
+        _isSpeaking.value = false
     }
 
     /**
@@ -82,6 +103,7 @@ class TextToSpeechService(
      */
     fun shutdown() {
         tts.stop()
+        _isSpeaking.value = false
         tts.shutdown()
     }
 
