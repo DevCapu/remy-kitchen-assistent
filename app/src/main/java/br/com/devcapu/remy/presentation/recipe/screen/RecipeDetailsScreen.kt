@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.NavigateBefore
 import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +48,10 @@ import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
 import br.com.devcapu.remy.data.recipe.Recipe
+import br.com.devcapu.remy.presentation.voice.VoiceOrb
+import br.com.devcapu.remy.presentation.voice.VoiceOrbUiState
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun RecipeDetailsScreen(
     modifier: Modifier = Modifier,
@@ -60,7 +63,9 @@ fun RecipeDetailsScreen(
     isListening: Boolean = false,
     onToggleListening: () -> Unit = {},
     voiceCommand: VoiceRecognitionService.VoiceCommand? = null,
-    onVoiceCommandHandled: () -> Unit = {}
+    onVoiceCommandHandled: () -> Unit = {},
+    voiceOrbState: VoiceOrbUiState = VoiceOrbUiState(),
+    onVoiceOrbClick: () -> Unit = {},
 ) {
     var isVoiceAssistantEnabled by remember { mutableStateOf(false) }
 
@@ -82,11 +87,15 @@ fun RecipeDetailsScreen(
         if (canSpeak && isVoiceAssistantEnabled) {
             val stepText =
                 "Passo ${selectedStepIndex + 1} de ${recipe.steps.size}: ${recipe.steps[selectedStepIndex]}"
-            val ingredientsText = if (currentStepIngredients.isNotEmpty()) {
-                "Ingredientes necessários: " + currentStepIngredients.joinToString(", ") {
-                    "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
+            val ingredientsText =
+                if (currentStepIngredients.isNotEmpty()) {
+                    "Ingredientes necessários: " +
+                        currentStepIngredients.joinToString(", ") {
+                            "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
+                        }
+                } else {
+                    ""
                 }
-            } else ""
 
             onSpeak("$stepText. $ingredientsText", TextToSpeech.QUEUE_FLUSH)
         }
@@ -115,19 +124,20 @@ fun RecipeDetailsScreen(
                 VoiceRecognitionService.VoiceCommand.INGREDIENTS -> {
                     if (currentStepIngredients.isNotEmpty()) {
                         val ingredientsText =
-                            "Ingredientes necessários: " + currentStepIngredients.joinToString(
-                                ", "
-                            ) {
-                                "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
-                            }
+                            "Ingredientes necessários: " +
+                                currentStepIngredients.joinToString(
+                                    ", ",
+                                ) {
+                                    "${it.name}, ${it.quantity} ${it.unit.orEmpty()}"
+                                }
                         onSpeak(
                             ingredientsText,
-                            TextToSpeech.QUEUE_ADD
+                            TextToSpeech.QUEUE_ADD,
                         )
                     } else {
                         onSpeak(
                             "Nenhum ingrediente necessário para este passo.",
-                            TextToSpeech.QUEUE_ADD
+                            TextToSpeech.QUEUE_ADD,
                         )
                     }
                 }
@@ -135,7 +145,7 @@ fun RecipeDetailsScreen(
                 else -> {
                     onSpeak(
                         "Comando não reconhecido.",
-                        TextToSpeech.QUEUE_ADD
+                        TextToSpeech.QUEUE_ADD,
                     )
                 }
             }
@@ -154,47 +164,50 @@ fun RecipeDetailsScreen(
     if (!isChefMode) {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
                 RecipeItem(
-                    modifier = Modifier
-                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                        .fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                            .fillMaxWidth(),
                     recipe = recipe,
                     chefMode = isChefMode,
-                    onClickItem = { }
+                    onClickItem = { },
                 )
             }
             if (hasIngredients) {
                 item {
                     Card(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .animateContentSize(),
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 16.dp)
+                                .animateContentSize(),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                     ) {
                         Column(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth()
+                            modifier =
+                                Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
                         ) {
                             Text(
                                 stringResource(R.string.ingredients),
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             currentStepIngredients.forEach { ingredient ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text(
                                         text = ingredient.name,
-                                        style = MaterialTheme.typography.labelLarge
+                                        style = MaterialTheme.typography.labelLarge,
                                     )
                                     Text(
-                                        text = "${ingredient.quantity} ${ingredient.unit.orEmpty()}"
+                                        text = "${ingredient.quantity} ${ingredient.unit.orEmpty()}",
                                     )
                                 }
                                 HorizontalDivider(Modifier.padding(vertical = 6.dp))
@@ -205,21 +218,22 @@ fun RecipeDetailsScreen(
             }
             item {
                 Card(
-                    modifier = Modifier
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                        .fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                            .fillMaxWidth(),
                     colors = CardDefaults.cardColors(),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             stringResource(R.string.preparation_mode),
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         recipe.steps.forEachIndexed { idx, step ->
                             Text(
                                 style = MaterialTheme.typography.displaySmall,
-                                text = "${idx + 1}. $step"
+                                text = "${idx + 1}. $step",
                             )
                         }
                     }
@@ -228,55 +242,58 @@ fun RecipeDetailsScreen(
         }
     } else {
         ConstraintLayout(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp)
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
         ) {
             val (recipeRef, ingredientsRef, stepsRef, controlsRef) = createRefs()
 
             RecipeItem(
-                modifier = Modifier.constrainAs(recipeRef) {
-                    top.linkTo(parent.top, margin = 16.dp)
-                    start.linkTo(parent.start, margin = 16.dp)
-                    end.linkTo(parent.end, margin = 16.dp)
-                },
+                modifier =
+                    Modifier.constrainAs(recipeRef) {
+                        top.linkTo(parent.top, margin = 16.dp)
+                        start.linkTo(parent.start, margin = 16.dp)
+                        end.linkTo(parent.end, margin = 16.dp)
+                    },
                 recipe = recipe,
                 chefMode = true,
-                onClickItem = { }
+                onClickItem = { },
             )
 
             if (hasIngredients) {
                 Card(
-                    modifier = Modifier
-                        .constrainAs(ingredientsRef) {
-                            top.linkTo(recipeRef.bottom, margin = 8.dp)
-                            start.linkTo(parent.start, margin = 16.dp)
-                            end.linkTo(parent.end, margin = 16.dp)
-                        }
-                        .animateContentSize(),
+                    modifier =
+                        Modifier
+                            .constrainAs(ingredientsRef) {
+                                top.linkTo(recipeRef.bottom, margin = 8.dp)
+                                start.linkTo(parent.start, margin = 16.dp)
+                                end.linkTo(parent.end, margin = 16.dp)
+                            }.animateContentSize(),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                 ) {
                     Column(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth()
+                        modifier =
+                            Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
                     ) {
                         Text(
                             stringResource(R.string.ingredients),
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         currentStepIngredients.forEach { ingredient ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
                                     text = ingredient.name,
-                                    style = MaterialTheme.typography.labelLarge
+                                    style = MaterialTheme.typography.labelLarge,
                                 )
                                 Text(
-                                    text = "${ingredient.quantity} ${ingredient.unit.orEmpty()}"
+                                    text = "${ingredient.quantity} ${ingredient.unit.orEmpty()}",
                                 )
                             }
                             HorizontalDivider(Modifier.padding(vertical = 6.dp))
@@ -286,132 +303,175 @@ fun RecipeDetailsScreen(
             }
 
             Card(
-                modifier = Modifier.constrainAs(stepsRef) {
-                    top.linkTo(
-                        if (hasIngredients) ingredientsRef.bottom else recipeRef.bottom,
-                        margin = 8.dp
-                    )
-                    start.linkTo(parent.start, margin = 16.dp)
-                    end.linkTo(parent.end, margin = 16.dp)
-                    bottom.linkTo(controlsRef.top, margin = 16.dp)
-                    height = Dimension.fillToConstraints
-                }
+                modifier =
+                    Modifier.constrainAs(stepsRef) {
+                        top.linkTo(
+                            if (hasIngredients) ingredientsRef.bottom else recipeRef.bottom,
+                            margin = 8.dp,
+                        )
+                        start.linkTo(parent.start, margin = 16.dp)
+                        end.linkTo(parent.end, margin = 16.dp)
+                        bottom.linkTo(controlsRef.top, margin = 16.dp)
+                        height = Dimension.fillToConstraints
+                    },
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     Text(
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 16.dp,
-                            bottom = 8.dp
-                        ),
-                        text = stringResource(
-                            R.string.preparation_mode_step,
-                            selectedStepIndex + 1,
-                            recipe.steps.size
-                        ),
-                        style = MaterialTheme.typography.titleMedium
+                        modifier =
+                            Modifier.padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 16.dp,
+                                bottom = 8.dp,
+                            ),
+                        text =
+                            stringResource(
+                                R.string.preparation_mode_step,
+                                selectedStepIndex + 1,
+                                recipe.steps.size,
+                            ),
+                        style = MaterialTheme.typography.titleMedium,
                     )
 
                     CircularList(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 0.dp)
-                            .fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 0.dp)
+                                .fillMaxWidth(),
                         items = recipe.steps,
                         isEndless = false,
-                        selectedStepIndex = selectedStepIndex
+                        selectedStepIndex = selectedStepIndex,
                     ) {
                         selectedStepIndex = it
                     }
                 }
             }
 
-            Row(
-                modifier = Modifier
-                    .constrainAs(controlsRef) {
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        bottom.linkTo(parent.bottom, margin = 16.dp)
-                    }
-                    .fillMaxWidth()
-                    .padding(end = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier =
+                    Modifier
+                        .constrainAs(controlsRef) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom, margin = 12.dp)
+                        }.fillMaxWidth()
+                        .padding(end = 72.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FloatingActionButton(
-                    onClick = {
-                        if (selectedStepIndex > 0) {
-                            selectedStepIndex--
-                        }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilledTonalIconButton(
+                        onClick = {
+                            isVoiceAssistantEnabled = !isVoiceAssistantEnabled
+                            if (isVoiceAssistantEnabled) {
+                                speakCurrentStep()
+                            } else {
+                                onStopSpeaking()
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (isVoiceAssistantEnabled) {
+                                    Icons.Default.Mic
+                                } else {
+                                    Icons.Default.MicOff
+                                },
+                            contentDescription =
+                                if (isVoiceAssistantEnabled) {
+                                    stringResource(R.string.disable_voice_assistant)
+                                } else {
+                                    stringResource(R.string.enable_voice_assistant)
+                                },
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.NavigateBefore,
-                        contentDescription = stringResource(R.string.previous_step)
-                    )
-                }
 
-                FloatingActionButton(onClick = {
-                    isVoiceAssistantEnabled = !isVoiceAssistantEnabled
-                    if (isVoiceAssistantEnabled) {
-                        speakCurrentStep()
-                    } else {
-                        onStopSpeaking()
+                    FilledTonalIconButton(
+                        onClick = { onToggleListening() },
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (isListening) {
+                                    Icons.Default.Headset
+                                } else {
+                                    Icons.Default.HeadsetOff
+                                },
+                            contentDescription =
+                                if (isListening) {
+                                    stringResource(R.string.disable_wake_word)
+                                } else {
+                                    stringResource(R.string.enable_wake_word)
+                                },
+                        )
                     }
-                }) {
-                    Icon(
-                        imageVector = if (isVoiceAssistantEnabled) Icons.Default.Mic else Icons.Default.MicOff,
-                        contentDescription = if (isVoiceAssistantEnabled)
-                            stringResource(R.string.disable_voice_assistant)
-                        else
-                            stringResource(R.string.enable_voice_assistant)
-                    )
                 }
 
-                FloatingActionButton(
-                    onClick = { onToggleListening() }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            16.dp,
+                            Alignment.CenterHorizontally,
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = if (isListening) Icons.Default.Headset else Icons.Default.HeadsetOff,
-                        contentDescription = if (isListening)
-                            stringResource(R.string.disable_voice_assistant)
-                        else
-                            stringResource(R.string.enable_voice_assistant)
-                    )
-                }
+                    FilledTonalIconButton(
+                        onClick = {
+                            if (selectedStepIndex > 0) {
+                                selectedStepIndex--
+                            }
+                        },
+                        enabled = selectedStepIndex > 0,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NavigateBefore,
+                            contentDescription = stringResource(R.string.previous_step),
+                        )
+                    }
 
-                // Botão para avançar ao próximo passo
-                FloatingActionButton(
-                    onClick = {
-                        if (selectedStepIndex < recipe.steps.size - 1) {
-                            selectedStepIndex++
-                        }
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.NavigateNext,
-                        contentDescription = stringResource(R.string.next_step)
+                    VoiceOrb(
+                        state = voiceOrbState,
+                        onClick = onVoiceOrbClick,
                     )
+
+                    FilledTonalIconButton(
+                        onClick = {
+                            if (selectedStepIndex < recipe.steps.size - 1) {
+                                selectedStepIndex++
+                            }
+                        },
+                        enabled = selectedStepIndex < recipe.steps.size - 1,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NavigateNext,
+                            contentDescription = stringResource(R.string.next_step),
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun CircularList(
     items: List<String>,
     modifier: Modifier = Modifier,
     isEndless: Boolean = false,
     selectedStepIndex: Int,
-    onItemClick: (index: Int) -> Unit = { }
+    onItemClick: (index: Int) -> Unit = { },
 ) {
-    val listState = rememberLazyListState(
-        if (isEndless) Int.MAX_VALUE / 2 else 0
-    )
+    val listState =
+        rememberLazyListState(
+            if (isEndless) Int.MAX_VALUE / 2 else 0,
+        )
 
     LaunchedEffect(selectedStepIndex) {
         listState.animateScrollToItem(selectedStepIndex)
@@ -420,58 +480,62 @@ fun CircularList(
     LazyColumn(
         state = listState,
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         items(
             count = if (isEndless) Int.MAX_VALUE else items.size,
             itemContent = {
                 val index = it % items.size
-                val textModifier = if (index == selectedStepIndex) {
-                    Modifier
-                        .background(
-                            color = Color(0x3B55FF00),
-                            shape = RoundedCornerShape(6.dp)
-                        )
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                } else {
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                }
+                val textModifier =
+                    if (index == selectedStepIndex) {
+                        Modifier
+                            .background(
+                                color = Color(0x3B55FF00),
+                                shape = RoundedCornerShape(6.dp),
+                            ).fillMaxWidth()
+                            .padding(8.dp)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    }
                 Text(
                     modifier = textModifier.clickable { onItemClick(index) },
                     style = MaterialTheme.typography.headlineMedium,
                     text = items[index],
-                    color = if (index == selectedStepIndex) Color.Black else Color.Black.copy(alpha = 0.5f)
+                    color = if (index == selectedStepIndex) Color.Black else Color.Black.copy(alpha = 0.5f),
                 )
-            }
+            },
         )
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Preview(showSystemUi = true, showBackground = false, name = "Modo Chef")
 @Composable
 private fun ChefModeRecipeScreenPreview() {
     RecipeDetailsScreen(
-        recipe = Recipe(
-            name = "Preview",
-            ingredients = emptyList(),
-            steps = listOf("Passo 1", "Passo 2")
-        ),
-        isChefMode = true
+        recipe =
+            Recipe(
+                name = "Preview",
+                ingredients = emptyList(),
+                steps = listOf("Passo 1", "Passo 2"),
+            ),
+        isChefMode = true,
     )
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Preview(showSystemUi = true, showBackground = false, name = "Visualização Normal")
 @Composable
 private fun RecipeScreenPreview() {
     RecipeDetailsScreen(
-        recipe = Recipe(
-            name = "Preview",
-            ingredients = emptyList(),
-            steps = listOf("Passo 1", "Passo 2")
-        ),
-        isChefMode = false
+        recipe =
+            Recipe(
+                name = "Preview",
+                ingredients = emptyList(),
+                steps = listOf("Passo 1", "Passo 2"),
+            ),
+        isChefMode = false,
     )
 }

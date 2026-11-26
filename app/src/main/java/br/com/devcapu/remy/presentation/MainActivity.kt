@@ -14,6 +14,7 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -33,10 +34,11 @@ import br.com.devcapu.remy.presentation.auth.screen.LoginScreen
 import br.com.devcapu.remy.presentation.auth.screen.SignUpScreen
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeDetailsScreen
 import br.com.devcapu.remy.presentation.recipe.screen.RecipeListScreen
+import br.com.devcapu.remy.presentation.voice.VoiceOrbMode
+import br.com.devcapu.remy.presentation.voice.VoiceOrbStateController
 import br.com.devcapu.remy.ui.theme.RemyTheme
 
 class MainActivity : ComponentActivity() {
-
     private val backStack = mutableStateListOf<Routes>(Routes.Login)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,22 +55,49 @@ class MainActivity : ComponentActivity() {
             var isChefMode by remember { mutableStateOf(false) }
             val ttsService = remember { TextToSpeechService.getInstance(this) }
             val canSpeak by ttsService.isTtsReady.collectAsState()
+            val isSpeaking by ttsService.isSpeaking.collectAsState()
+            val voiceOrbController = remember { VoiceOrbStateController() }
+            val voiceOrbState by voiceOrbController.state.collectAsState()
             var isListening by remember { mutableStateOf(false) }
             var voiceCommand by remember { mutableStateOf<VoiceRecognitionService.VoiceCommand?>(null) }
-            val voiceRecognitionCallback = remember {
-                object : VoiceRecognitionService.VoiceRecognitionCallback {
-                    override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
-                        voiceCommand = command
-                    }
-                    override fun onTextRecognized(text: String) = Unit
-                    override fun onError(error: String) {
+            val voiceRecognitionCallback =
+                remember {
+                    object : VoiceRecognitionService.VoiceRecognitionCallback {
+                        override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
+                            voiceCommand = command
+                        }
 
+                        override fun onTextRecognized(text: String) = Unit
+
+                        override fun onError(error: String) {
+                            voiceOrbController.onRecognitionError()
+                        }
+
+                        override fun onListeningStateChanged(isListening: Boolean) {
+                            voiceOrbController.onListeningChanged(isListening)
+                        }
+
+                        override fun onRmsChanged(rmsdB: Float) {
+                            voiceOrbController.onAudioRmsChanged(rmsdB)
+                        }
                     }
-                    override fun onListeningStateChanged(listening: Boolean) = Unit
                 }
-            }
             val voiceRecognitionService = remember { VoiceRecognitionService(this, voiceRecognitionCallback) }
             val porcupineManager: PorcupineManager = remember { PorcupineManagerSingleton.getInstance(this, voiceRecognitionService) }
+
+            LaunchedEffect(isSpeaking) {
+                voiceOrbController.onSpeakingChanged(isSpeaking)
+            }
+
+            LaunchedEffect(isChefMode) {
+                if (!isChefMode) {
+                    ttsService.stop()
+                    voiceRecognitionService.stopListening()
+                    runCatching { porcupineManager.stop() }
+                    isListening = false
+                    voiceOrbController.reset()
+                }
+            }
 
             RemyTheme {
                 Scaffold(
@@ -79,7 +108,7 @@ class MainActivity : ComponentActivity() {
                         FloatingActionButton(onClick = { isChefMode = !isChefMode }) {
                             Icon(
                                 imageVector = if (isChefMode) Icons.Default.Pause else Icons.Default.LocalFireDepartment,
-                                contentDescription = "Iniciar escuta"
+                                contentDescription = "Iniciar escuta",
                             )
                         }
                     },
@@ -93,75 +122,94 @@ class MainActivity : ComponentActivity() {
                             backStack.removeLastOrNull()
                             isChefMode = false
                             ttsService.stop()
-                            porcupineManager.stop()
+                            voiceRecognitionService.stopListening()
+                            runCatching { porcupineManager.stop() }
                             isListening = false
+                            voiceOrbController.reset()
                         },
                         entryProvider = { key ->
                             currentRoute = key
                             when (key) {
-                                is Routes.Login -> NavEntry(key) {
-                                    LoginScreen(
-                                        modifier = Modifier.fillMaxSize(),
-                                        onLoginSuccess = {
-                                            backStack.clear()
-                                            backStack.add(Routes.List)
-                                        },
-                                        onNavigateToSignUp = {
-                                            backStack.clear()
-                                            backStack.add(Routes.SignUp)
-                                        }
-                                    )
-                                }
+                                is Routes.Login ->
+                                    NavEntry(key) {
+                                        LoginScreen(
+                                            modifier = Modifier.fillMaxSize(),
+                                            onLoginSuccess = {
+                                                backStack.clear()
+                                                backStack.add(Routes.List)
+                                            },
+                                            onNavigateToSignUp = {
+                                                backStack.clear()
+                                                backStack.add(Routes.SignUp)
+                                            },
+                                        )
+                                    }
 
-                                is Routes.SignUp -> NavEntry(key) {
-                                    SignUpScreen(
-                                        modifier = Modifier.fillMaxSize(),
-                                        onSignUpSuccess = {
-                                            backStack.clear()
-                                            backStack.add(Routes.List)
-                                        },
-                                        onNavigateToLogin = {
-                                            backStack.clear()
-                                            backStack.add(Routes.Login)
-                                        }
-                                    )
-                                }
+                                is Routes.SignUp ->
+                                    NavEntry(key) {
+                                        SignUpScreen(
+                                            modifier = Modifier.fillMaxSize(),
+                                            onSignUpSuccess = {
+                                                backStack.clear()
+                                                backStack.add(Routes.List)
+                                            },
+                                            onNavigateToLogin = {
+                                                backStack.clear()
+                                                backStack.add(Routes.Login)
+                                            },
+                                        )
+                                    }
 
-                                is Routes.List -> NavEntry(key) {
-                                    RecipeListScreen(
-                                        modifier = Modifier.fillMaxSize(),
-                                        onClickItem = { recipe ->
-                                            backStack.add(Routes.Details(recipe))
-                                        }
-                                    )
-                                }
+                                is Routes.List ->
+                                    NavEntry(key) {
+                                        RecipeListScreen(
+                                            modifier = Modifier.fillMaxSize(),
+                                            onClickItem = { recipe ->
+                                                backStack.add(Routes.Details(recipe))
+                                            },
+                                        )
+                                    }
 
-                                is Routes.Details -> NavEntry(key) {
-                                    RecipeDetailsScreen(
-                                        recipe = key.recipe,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isChefMode = isChefMode,
-                                        canSpeak = canSpeak,
-                                        onSpeak = { text, queueMode -> ttsService.speak(text, queueMode) },
-                                        onStopSpeaking = { ttsService.stop() },
-                                        isListening = isListening,
-                                        onToggleListening = {
-                                            isListening = !isListening
-                                            if (isListening) {
-                                                porcupineManager.start()
-                                            } else {
-                                                porcupineManager.stop()
-                                            }
-                                        },
-                                        voiceCommand = voiceCommand,
-                                        onVoiceCommandHandled = {
-                                            voiceCommand = null
-                                            porcupineManager.start()
-                                        }
-                                    )
-                                }
+                                is Routes.Details ->
+                                    NavEntry(key) {
+                                        RecipeDetailsScreen(
+                                            recipe = key.recipe,
+                                            modifier = Modifier.fillMaxSize(),
+                                            isChefMode = isChefMode,
+                                            canSpeak = canSpeak,
+                                            onSpeak = { text, queueMode -> ttsService.speak(text, queueMode) },
+                                            onStopSpeaking = { ttsService.stop() },
+                                            isListening = isListening,
+                                            onToggleListening = {
+                                                isListening = !isListening
+                                                if (isListening) {
+                                                    runCatching { porcupineManager.start() }
+                                                } else {
+                                                    runCatching { porcupineManager.stop() }
+                                                }
+                                            },
+                                            voiceCommand = voiceCommand,
+                                            onVoiceCommandHandled = {
+                                                voiceCommand = null
+                                                if (isListening) {
+                                                    runCatching { porcupineManager.start() }
+                                                }
+                                            },
+                                            voiceOrbState = voiceOrbState,
+                                            onVoiceOrbClick = {
+                                                when (voiceOrbState.mode) {
+                                                    VoiceOrbMode.SPEAKING -> ttsService.stop()
+                                                    VoiceOrbMode.LISTENING -> voiceRecognitionService.stopListening()
+                                                    VoiceOrbMode.IDLE -> {
+                                                        runCatching { porcupineManager.stop() }
+                                                        voiceRecognitionService.startListening()
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    }
                             }
-                        }
+                        },
                     )
                 }
             }

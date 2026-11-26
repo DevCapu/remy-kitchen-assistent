@@ -7,6 +7,19 @@
     <!-- Assistente de voz -->
     <string name="enable_voice_assistant">Ativar assistente de voz</string>
     <string name="disable_voice_assistant">Desativar assistente de voz</string>
+    <string name="enable_wake_word">Ativar escuta contínua</string>
+    <string name="disable_wake_word">Desativar escuta contínua</string>
     <string name="next_step">Próximo passo</string>
     <string name="previous_step">Passo anterior</string>
+
+    <!-- Orbe de voz -->
+    <string name="voice_orb_status_idle">Toque para falar</string>
+    <string name="voice_orb_status_listening">Ouvindo…</string>
+    <string name="voice_orb_status_speaking">Falando…</string>
+    <string name="voice_orb_state_idle">Inativo</string>
+    <string name="voice_orb_state_listening">Ouvindo</string>
+    <string name="voice_orb_state_speaking">Falando</string>
+    <string name="voice_orb_cd_idle">Assistente de voz inativo. Toque para começar a falar.</string>
+    <string name="voice_orb_cd_listening">Assistente de voz ouvindo. Toque para parar de ouvir.</string>
+    <string name="voice_orb_cd_speaking">Assistente de voz falando. Toque para interromper a fala.</string>
 </resources>
