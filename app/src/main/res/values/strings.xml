@@ -22,4 +22,12 @@
     <string name="voice_orb_cd_idle">Assistente de voz inativo. Toque para começar a falar.</string>
     <string name="voice_orb_cd_listening">Assistente de voz ouvindo. Toque para parar de ouvir.</string>
     <string name="voice_orb_cd_speaking">Assistente de voz falando. Toque para interromper a fala.</string>
+
+    <!-- Wake word (Vosk) -->
+    <string name="wake_word_loading">Carregando detecção de voz</string>
+    <string name="wake_word_status_loading">Carregando detecção de voz…</string>
+    <string name="wake_word_status_listening">Diga \"Ei Remy\"</string>
+    <string name="wake_word_error_permission_denied">Permissão de microfone necessária para a escuta contínua.</string>
+    <string name="wake_word_error_model_load_failed">Não foi possível carregar o modelo de voz.</string>
+    <string name="wake_word_error_audio">Erro ao acessar o microfone. Toque para tentar novamente.</string>
 </resources>

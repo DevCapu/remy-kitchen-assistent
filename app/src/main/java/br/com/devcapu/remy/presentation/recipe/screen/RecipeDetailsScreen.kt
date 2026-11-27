@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.NavigateBefore
 import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,12 +43,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import br.com.devcapu.remy.R
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
+import br.com.devcapu.remy.conversation.wakeword.WakeWordError
+import br.com.devcapu.remy.conversation.wakeword.WakeWordStatus
+import br.com.devcapu.remy.conversation.wakeword.WakeWordUiState
 import br.com.devcapu.remy.data.recipe.Recipe
 import br.com.devcapu.remy.presentation.voice.VoiceOrb
 import br.com.devcapu.remy.presentation.voice.VoiceOrbUiState
@@ -66,6 +76,7 @@ fun RecipeDetailsScreen(
     onVoiceCommandHandled: () -> Unit = {},
     voiceOrbState: VoiceOrbUiState = VoiceOrbUiState(),
     onVoiceOrbClick: () -> Unit = {},
+    wakeWordState: WakeWordUiState = WakeWordUiState(),
 ) {
     var isVoiceAssistantEnabled by remember { mutableStateOf(false) }
 
@@ -392,24 +403,77 @@ fun RecipeDetailsScreen(
                         )
                     }
 
+                    val isWakeWordLoading = wakeWordState.status == WakeWordStatus.LOADING_MODEL
+                    val isWakeWordEnabled = wakeWordState.isEnabled || isListening
+                    val wakeWordLoadingDescription = stringResource(R.string.wake_word_loading)
+
                     FilledTonalIconButton(
                         onClick = { onToggleListening() },
+                        enabled = !isWakeWordLoading,
                     ) {
-                        Icon(
-                            imageVector =
-                                if (isListening) {
-                                    Icons.Default.Headset
-                                } else {
-                                    Icons.Default.HeadsetOff
-                                },
-                            contentDescription =
-                                if (isListening) {
-                                    stringResource(R.string.disable_wake_word)
-                                } else {
-                                    stringResource(R.string.enable_wake_word)
-                                },
-                        )
+                        if (isWakeWordLoading) {
+                            CircularProgressIndicator(
+                                modifier =
+                                    Modifier
+                                        .size(20.dp)
+                                        .semantics {
+                                            contentDescription = wakeWordLoadingDescription
+                                        },
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                imageVector =
+                                    if (isWakeWordEnabled) {
+                                        Icons.Default.Headset
+                                    } else {
+                                        Icons.Default.HeadsetOff
+                                    },
+                                contentDescription =
+                                    if (isWakeWordEnabled) {
+                                        stringResource(R.string.disable_wake_word)
+                                    } else {
+                                        stringResource(R.string.enable_wake_word)
+                                    },
+                            )
+                        }
                     }
+                }
+
+                val wakeWordStatusText =
+                    when (wakeWordState.status) {
+                        WakeWordStatus.LOADING_MODEL -> stringResource(R.string.wake_word_status_loading)
+                        WakeWordStatus.LISTENING -> stringResource(R.string.wake_word_status_listening)
+                        WakeWordStatus.ERROR ->
+                            when (wakeWordState.error) {
+                                WakeWordError.PERMISSION_DENIED ->
+                                    stringResource(R.string.wake_word_error_permission_denied)
+                                WakeWordError.MODEL_LOAD_FAILED ->
+                                    stringResource(R.string.wake_word_error_model_load_failed)
+                                WakeWordError.AUDIO_ERROR, null ->
+                                    stringResource(R.string.wake_word_error_audio)
+                            }
+                        WakeWordStatus.IDLE, WakeWordStatus.PAUSED_FOR_COMMAND -> null
+                    }
+
+                if (wakeWordStatusText != null) {
+                    Text(
+                        text = wakeWordStatusText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color =
+                            if (wakeWordState.status == WakeWordStatus.ERROR) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.secondary
+                            },
+                        textAlign = TextAlign.Center,
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 8.dp)
+                                .semantics {
+                                    liveRegion = LiveRegionMode.Polite
+                                },
+                    )
                 }
 
                 Row(
