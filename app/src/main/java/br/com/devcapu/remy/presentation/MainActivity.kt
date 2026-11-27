@@ -1,10 +1,13 @@
 package br.com.devcapu.remy.presentation
 
-import ai.picovoice.porcupine.PorcupineManager
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -14,6 +17,7 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -23,12 +27,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import br.com.devcapu.remy.conversation.LanguageConfigChecker
 import br.com.devcapu.remy.conversation.TextToSpeechService
 import br.com.devcapu.remy.conversation.VoiceRecognitionService
-import br.com.devcapu.remy.infra.PorcupineManagerSingleton
+import br.com.devcapu.remy.conversation.wakeword.WakeWordCoordinator
+import br.com.devcapu.remy.infra.VoskWakeWordEngine
 import br.com.devcapu.remy.navigation.Routes
 import br.com.devcapu.remy.presentation.auth.screen.LoginScreen
 import br.com.devcapu.remy.presentation.auth.screen.SignUpScreen
@@ -37,6 +46,12 @@ import br.com.devcapu.remy.presentation.recipe.screen.RecipeListScreen
 import br.com.devcapu.remy.presentation.voice.VoiceOrbMode
 import br.com.devcapu.remy.presentation.voice.VoiceOrbStateController
 import br.com.devcapu.remy.ui.theme.RemyTheme
+import java.util.concurrent.atomic.AtomicReference
+
+private enum class PendingAudioAction {
+    WAKE_WORD,
+    MANUAL_COMMAND,
+}
 
 class MainActivity : ComponentActivity() {
     private val backStack = mutableStateListOf<Routes>(Routes.Login)
@@ -51,6 +66,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            val lifecycleOwner = LocalLifecycleOwner.current
             var currentRoute by remember { mutableStateOf(backStack.lastOrNull()) }
             var isChefMode by remember { mutableStateOf(false) }
             val ttsService = remember { TextToSpeechService.getInstance(this) }
@@ -58,10 +74,25 @@ class MainActivity : ComponentActivity() {
             val isSpeaking by ttsService.isSpeaking.collectAsState()
             val voiceOrbController = remember { VoiceOrbStateController() }
             val voiceOrbState by voiceOrbController.state.collectAsState()
-            var isListening by remember { mutableStateOf(false) }
             var voiceCommand by remember { mutableStateOf<VoiceRecognitionService.VoiceCommand?>(null) }
+            var pendingAudioAction by remember { mutableStateOf<PendingAudioAction?>(null) }
+
+            val voiceRecognitionServiceRef = remember { AtomicReference<VoiceRecognitionService?>(null) }
+            val wakeWordEngine = remember { VoskWakeWordEngine(applicationContext) }
+            val wakeWordCoordinator =
+                remember(wakeWordEngine, ttsService) {
+                    WakeWordCoordinator(
+                        engine = wakeWordEngine,
+                        onStartCommandRecognition = {
+                            ttsService.stop()
+                            voiceRecognitionServiceRef.get()?.startListening()
+                        },
+                    )
+                }
+            val wakeWordState by wakeWordCoordinator.state.collectAsState()
+
             val voiceRecognitionCallback =
-                remember {
+                remember(voiceOrbController, wakeWordCoordinator) {
                     object : VoiceRecognitionService.VoiceRecognitionCallback {
                         override fun onCommandRecognized(command: VoiceRecognitionService.VoiceCommand) {
                             voiceCommand = command
@@ -71,6 +102,7 @@ class MainActivity : ComponentActivity() {
 
                         override fun onError(error: String) {
                             voiceOrbController.onRecognitionError()
+                            wakeWordCoordinator.onCommandSessionFinished()
                         }
 
                         override fun onListeningStateChanged(isListening: Boolean) {
@@ -82,8 +114,38 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            val voiceRecognitionService = remember { VoiceRecognitionService(this, voiceRecognitionCallback) }
-            val porcupineManager: PorcupineManager = remember { PorcupineManagerSingleton.getInstance(this, voiceRecognitionService) }
+            val voiceRecognitionService =
+                remember(voiceRecognitionCallback) {
+                    VoiceRecognitionService(this, voiceRecognitionCallback).also {
+                        voiceRecognitionServiceRef.set(it)
+                    }
+                }
+
+            val audioPermissionLauncher =
+                rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission(),
+                ) { granted ->
+                    val action = pendingAudioAction
+                    pendingAudioAction = null
+                    if (granted) {
+                        when (action) {
+                            PendingAudioAction.WAKE_WORD ->
+                                wakeWordCoordinator.enable(hasAudioPermission = true)
+                            PendingAudioAction.MANUAL_COMMAND ->
+                                wakeWordCoordinator.onManualCommandStart()
+                            null -> Unit
+                        }
+                    } else {
+                        wakeWordCoordinator.enable(hasAudioPermission = false)
+                    }
+                }
+
+            val hasAudioPermission: () -> Boolean = {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.RECORD_AUDIO,
+                ) == PackageManager.PERMISSION_GRANTED
+            }
 
             LaunchedEffect(isSpeaking) {
                 voiceOrbController.onSpeakingChanged(isSpeaking)
@@ -91,11 +153,31 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(isChefMode) {
                 if (!isChefMode) {
-                    ttsService.stop()
+                    wakeWordCoordinator.onPauseSession()
                     voiceRecognitionService.stopListening()
-                    runCatching { porcupineManager.stop() }
-                    isListening = false
+                    ttsService.stop()
                     voiceOrbController.reset()
+                }
+            }
+
+            DisposableEffect(lifecycleOwner, wakeWordCoordinator, voiceRecognitionService) {
+                val observer =
+                    LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_STOP) {
+                            wakeWordCoordinator.onPauseSession()
+                            voiceRecognitionService.stopListening()
+                        }
+                    }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
+
+            DisposableEffect(Unit) {
+                onDispose {
+                    wakeWordCoordinator.release()
+                    voiceRecognitionService.destroy()
                 }
             }
 
@@ -121,10 +203,9 @@ class MainActivity : ComponentActivity() {
                         onBack = {
                             backStack.removeLastOrNull()
                             isChefMode = false
-                            ttsService.stop()
+                            wakeWordCoordinator.onPauseSession()
                             voiceRecognitionService.stopListening()
-                            runCatching { porcupineManager.stop() }
-                            isListening = false
+                            ttsService.stop()
                             voiceOrbController.reset()
                         },
                         entryProvider = { key ->
@@ -179,33 +260,42 @@ class MainActivity : ComponentActivity() {
                                             canSpeak = canSpeak,
                                             onSpeak = { text, queueMode -> ttsService.speak(text, queueMode) },
                                             onStopSpeaking = { ttsService.stop() },
-                                            isListening = isListening,
+                                            isListening = wakeWordState.isEnabled,
                                             onToggleListening = {
-                                                isListening = !isListening
-                                                if (isListening) {
-                                                    runCatching { porcupineManager.start() }
+                                                if (wakeWordState.isEnabled) {
+                                                    wakeWordCoordinator.disable()
+                                                } else if (hasAudioPermission()) {
+                                                    wakeWordCoordinator.enable(hasAudioPermission = true)
                                                 } else {
-                                                    runCatching { porcupineManager.stop() }
+                                                    pendingAudioAction = PendingAudioAction.WAKE_WORD
+                                                    audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                                 }
                                             },
                                             voiceCommand = voiceCommand,
                                             onVoiceCommandHandled = {
                                                 voiceCommand = null
-                                                if (isListening) {
-                                                    runCatching { porcupineManager.start() }
-                                                }
+                                                wakeWordCoordinator.onCommandSessionFinished()
                                             },
                                             voiceOrbState = voiceOrbState,
                                             onVoiceOrbClick = {
                                                 when (voiceOrbState.mode) {
                                                     VoiceOrbMode.SPEAKING -> ttsService.stop()
-                                                    VoiceOrbMode.LISTENING -> voiceRecognitionService.stopListening()
+                                                    VoiceOrbMode.LISTENING -> {
+                                                        voiceRecognitionService.stopListening()
+                                                        wakeWordCoordinator.onCommandSessionFinished()
+                                                    }
+
                                                     VoiceOrbMode.IDLE -> {
-                                                        runCatching { porcupineManager.stop() }
-                                                        voiceRecognitionService.startListening()
+                                                        if (hasAudioPermission()) {
+                                                            wakeWordCoordinator.onManualCommandStart()
+                                                        } else {
+                                                            pendingAudioAction = PendingAudioAction.MANUAL_COMMAND
+                                                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                        }
                                                     }
                                                 }
                                             },
+                                            wakeWordState = wakeWordState,
                                         )
                                     }
                             }

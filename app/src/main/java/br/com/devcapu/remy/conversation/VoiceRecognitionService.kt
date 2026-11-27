@@ -117,6 +117,8 @@ class VoiceRecognitionService(
                                             "🎤 Speech Recognition: Comando interpretado - $parsedCommand",
                                         )
                                         callback.onCommandRecognized(parsedCommand)
+                                    } else {
+                                        callback.onError("Nenhuma correspondência encontrada")
                                     }
                                 }
 
@@ -151,8 +153,13 @@ class VoiceRecognitionService(
     }
 
     fun startListening() {
+        val recognizer = speechRecognizer
+        if (recognizer == null) {
+            callback.onError("Reconhecimento de voz indisponível")
+            return
+        }
         Log.d(TAG, "🎤 Controle do microfone: Speech Recognition está assumindo o controle")
-        speechRecognizer?.startListening(recognitionIntent)
+        recognizer.startListening(recognitionIntent)
     }
 
     fun stopListening() {
